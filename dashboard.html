@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CSR Dashboard</title>
+</head>
+<body>
+  <h2 id="greeting">Checking session...</h2>
+  <button onclick="logout()">Log out</button>
+
+  <script>
+    var EXEC_URL = "PASTE_YOUR_EXEC_URL_HERE";
+    var token = sessionStorage.getItem("token");
+
+    if (!token) {
+      window.location.href = "index.html";
+    } else {
+      fetch(EXEC_URL + "?action=whoami&token=" + encodeURIComponent(token))
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (data.valid) {
+            document.getElementById("greeting").textContent =
+              "Welcome, " + data.name + " (" + data.role + ")";
+          } else {
+            sessionStorage.clear();
+            window.location.href = "index.html";
+          }
+        });
+    }
+
+    function logout() {
+      sessionStorage.clear();
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>
