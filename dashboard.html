@@ -11,11 +11,28 @@
     var EXEC_URL = "https://script.google.com/macros/s/AKfycbyD9esDoJQrcSprufwsEQugkdbUZwSsQ-6eYih1M9b7uVe859yprQD4U6p9g9bj1Kw-/exec";
     var token = sessionStorage.getItem("token");
 
+    function jsonp(url) {
+      return new Promise(function(resolve, reject) {
+        var callbackName = "cb_" + Math.round(Math.random() * 1000000);
+        window[callbackName] = function(data) {
+          resolve(data);
+          delete window[callbackName];
+          document.body.removeChild(script);
+        };
+        var script = document.createElement("script");
+        script.src = url + (url.indexOf("?") >= 0 ? "&" : "?") + "callback=" + callbackName;
+        script.onerror = function() {
+          reject(new Error("Request failed"));
+          delete window[callbackName];
+        };
+        document.body.appendChild(script);
+      });
+    }
+
     if (!token) {
       window.location.href = "index.html";
     } else {
-      fetch(EXEC_URL + "?action=whoami&token=" + encodeURIComponent(token))
-        .then(function(res) { return res.json(); })
+      jsonp(EXEC_URL + "?action=whoami&token=" + encodeURIComponent(token))
         .then(function(data) {
           if (data.valid) {
             document.getElementById("greeting").textContent =
@@ -30,23 +47,7 @@
     function logout() {
       sessionStorage.clear();
       window.location.href = "index.html";
-    }function jsonp(url) {
-  return new Promise(function(resolve, reject) {
-    var callbackName = "cb_" + Math.round(Math.random() * 1000000);
-    window[callbackName] = function(data) {
-      resolve(data);
-      delete window[callbackName];
-      document.body.removeChild(script);
-    };
-    var script = document.createElement("script");
-    script.src = url + (url.indexOf("?") >= 0 ? "&" : "?") + "callback=" + callbackName;
-    script.onerror = function() {
-      reject(new Error("Request failed"));
-      delete window[callbackName];
-    };
-    document.body.appendChild(script);
-  });
-}
+    }
   </script>
 </body>
 </html>
