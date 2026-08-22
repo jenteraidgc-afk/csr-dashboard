@@ -27,9 +27,8 @@
 
       var url = EXEC_URL + "?action=login&email=" + encodeURIComponent(email) + "&pin=" + encodeURIComponent(pin);
 
-      fetch(url)
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
+      jsonp(url)
+  .then(function(data) {
           if (data.success) {
             sessionStorage.setItem("token", data.token);
             sessionStorage.setItem("name", data.name);
