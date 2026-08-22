@@ -13,11 +13,16 @@
     #pageInfo { margin-left: 8px; color: #666; }
     .controls { margin: 12px 0; padding: 12px; background: #fafafa; border-radius: 6px; }
     .error { color: #a33; }
+    .top-links { margin: 10px 0; }
+    .admin-tool { margin-top: 24px; padding: 12px; background: #fff8e0; border-radius: 6px; }
   </style>
 </head>
 <body>
   <h2 id="greeting">Checking session...</h2>
-  <button onclick="logout()">Log out</button>
+  <div class="top-links">
+    <a href="appointments.html">Appointments</a> &middot;
+    <button onclick="logout()">Log out</button>
+  </div>
 
   <h3>Summary</h3>
   <div id="data">Loading...</div>
@@ -30,6 +35,13 @@
     <button onclick="prevPage()">Previous</button>
     <button onclick="nextPage()">Next</button>
     <span id="pageInfo"></span>
+  </div>
+
+  <div id="adminTool" class="admin-tool" style="display:none;">
+    <h3>Admin: send a new PIN</h3>
+    <input type="email" id="pinResetEmail" placeholder="user@example.com">
+    <button onclick="sendPin()">Send new PIN by email</button>
+    <div id="pinResetResult"></div>
   </div>
 
   <script>
@@ -70,6 +82,9 @@
               "Welcome, " + data.name + " (" + data.role + ")";
             loadSummary();
             renderControls();
+            if (currentRole === "Admin") {
+              document.getElementById("adminTool").style.display = "block";
+            }
           } else {
             sessionStorage.clear();
             window.location.href = "index.html";
@@ -187,6 +202,17 @@
 
     function nextPage() { currentPage++; loadDetails(); }
     function prevPage() { if (currentPage > 1) { currentPage--; loadDetails(); } }
+
+    function sendPin() {
+      var email = document.getElementById("pinResetEmail").value.trim();
+      var resultEl = document.getElementById("pinResetResult");
+      resultEl.textContent = "Sending...";
+
+      jsonp(EXEC_URL + "?action=resetPin&token=" + encodeURIComponent(token) + "&email=" + encodeURIComponent(email))
+        .then(function(data) {
+          resultEl.textContent = data.success ? data.message : (data.error || "Something went wrong.");
+        });
+    }
 
     function logout() {
       sessionStorage.clear();
