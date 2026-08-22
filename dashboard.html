@@ -2,10 +2,17 @@
 <html>
 <head>
   <title>CSR Dashboard</title>
+  <style>
+    body { font-family: sans-serif; max-width: 500px; margin: 60px auto; }
+    #data { margin-top: 20px; padding: 16px; background: #f4f4f4; border-radius: 6px; white-space: pre-wrap; font-family: monospace; font-size: 13px; }
+  </style>
 </head>
 <body>
   <h2 id="greeting">Checking session...</h2>
   <button onclick="logout()">Log out</button>
+
+  <h3>Your data:</h3>
+  <div id="data">Loading...</div>
 
   <script>
     var EXEC_URL = "https://script.google.com/macros/s/AKfycbyD9esDoJQrcSprufwsEQugkdbUZwSsQ-6eYih1M9b7uVe859yprQD4U6p9g9bj1Kw-/exec";
@@ -37,10 +44,22 @@
           if (data.valid) {
             document.getElementById("greeting").textContent =
               "Welcome, " + data.name + " (" + data.role + ")";
+            loadSummary();
           } else {
             sessionStorage.clear();
             window.location.href = "index.html";
           }
+        });
+    }
+
+    function loadSummary() {
+      jsonp(EXEC_URL + "?action=summary&token=" + encodeURIComponent(token))
+        .then(function(data) {
+          document.getElementById("data").textContent = JSON.stringify(data, null, 2);
+        })
+        .catch(function(err) {
+          document.getElementById("data").textContent = "Error loading data.";
+          console.error(err);
         });
     }
 
