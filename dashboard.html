@@ -3,21 +3,38 @@
 <head>
   <title>CSR Dashboard</title>
   <style>
-    body { font-family: sans-serif; max-width: 500px; margin: 60px auto; }
-    #data { margin-top: 20px; padding: 16px; background: #f4f4f4; border-radius: 6px; white-space: pre-wrap; font-family: monospace; font-size: 13px; }
+    body { font-family: sans-serif; max-width: 600px; margin: 60px auto; padding: 0 16px; }
+    #data { margin-top: 12px; padding: 16px; background: #f4f4f4; border-radius: 6px; white-space: pre-wrap; font-family: monospace; font-size: 13px; }
+    .record { border-bottom: 1px solid #ddd; padding: 10px 0; }
+    .record .score { font-weight: bold; }
+    .record .meta { color: #666; font-size: 13px; }
+    button { padding: 6px 14px; cursor: pointer; margin-right: 6px; }
+    #pageInfo { margin-left: 8px; color: #666; }
   </style>
 </head>
 <body>
   <h2 id="greeting">Checking session...</h2>
   <button onclick="logout()">Log out</button>
 
-  <h3>Your data:</h3>
+  <h3>Summary</h3>
   <div id="data">Loading...</div>
+
+  <h3>My audit history</h3>
+  <div id="details">Loading...</div>
+  <div style="margin-top:10px;">
+    <button onclick="prevPage()">Previous</button>
+    <button onclick="nextPage()">Next</button>
+    <span id="pageInfo"></span>
+  </div>
 
   <script>
     var EXEC_URL = "https://script.google.com/macros/s/AKfycbyD9esDoJQrcSprufwsEQugkdbUZwSsQ-6eYih1M9b7uVe859yprQD4U6p9g9bj1Kw-/exec";
     var token = sessionStorage.getItem("token");
+    var currentPage = 1;
 
+    // Loads the Apps Script response via a <script> tag instead of fetch(),
+    // since Apps Script's ContentService doesn't reliably send CORS headers
+    // and a normal fetch() gets blocked by the browser.
     function jsonp(url) {
       return new Promise(function(resolve, reject) {
         var callbackName = "cb_" + Math.round(Math.random() * 1000000);
@@ -45,6 +62,7 @@
             document.getElementById("greeting").textContent =
               "Welcome, " + data.name + " (" + data.role + ")";
             loadSummary();
+            loadDetails();
           } else {
             sessionStorage.clear();
             window.location.href = "index.html";
@@ -58,10 +76,45 @@
           document.getElementById("data").textContent = JSON.stringify(data, null, 2);
         })
         .catch(function(err) {
-          document.getElementById("data").textContent = "Error loading data.";
+          document.getElementById("data").textContent = "Error loading summary.";
           console.error(err);
         });
     }
+
+    function loadDetails() {
+      document.getElementById("details").textContent = "Loading...";
+      jsonp(EXEC_URL + "?action=details&token=" + encodeURIComponent(token) + "&page=" + currentPage + "&pageSize=10")
+        .then(function(data) {
+          if (data.error) {
+            document.getElementById("details").textContent = data.error;
+            document.getElementById("pageInfo").textContent = "";
+            return;
+          }
+          if (!data.records || data.records.length === 0) {
+            document.getElementById("details").textContent = "No records found.";
+          } else {
+            var html = data.records.map(function(r) {
+              return "<div class='record'>" +
+                "<div class='score'>Score: " + (r["Ave Score"] || "-") + "</div>" +
+                "<div class='meta'>" + (r["Chat Date"] || "") + " &middot; " +
+                (r["Main Category"] || "") + " / " + (r["Sub Category"] || "") + "</div>" +
+                (r["Successes"] ? "<div><strong>Successes:</strong> " + r["Successes"] + "</div>" : "") +
+                (r["Opportunities"] ? "<div><strong>Opportunities:</strong> " + r["Opportunities"] + "</div>" : "") +
+                (r["Recommendations"] ? "<div><strong>Recommendations:</strong> " + r["Recommendations"] + "</div>" : "") +
+                "</div>";
+            }).join("");
+            document.getElementById("details").innerHTML = html;
+          }
+          document.getElementById("pageInfo").textContent = "Page " + data.page + " of " + data.totalPages + " (" + data.totalRecords + " total)";
+        })
+        .catch(function(err) {
+          document.getElementById("details").textContent = "Error loading details.";
+          console.error(err);
+        });
+    }
+
+    function nextPage() { currentPage++; loadDetails(); }
+    function prevPage() { if (currentPage > 1) { currentPage--; loadDetails(); } }
 
     function logout() {
       sessionStorage.clear();
