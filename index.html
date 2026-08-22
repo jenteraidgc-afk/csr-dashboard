@@ -17,7 +17,28 @@
   <div id="error"></div>
 
   <script>
-    var EXEC_URL = "https://script.google.com/macros/s/AKfycbyD9esDoJQrcSprufwsEQugkdbUZwSsQ-6eYih1M9b7uVe859yprQD4U6p9g9bj1Kw-/exec";
+    var EXEC_URL = "PASTE_YOUR_EXEC_URL_HERE";
+
+    // Loads the Apps Script response via a <script> tag instead of fetch(),
+    // since Apps Script's ContentService doesn't reliably send CORS headers
+    // and a normal fetch() gets blocked by the browser.
+    function jsonp(url) {
+      return new Promise(function(resolve, reject) {
+        var callbackName = "cb_" + Math.round(Math.random() * 1000000);
+        window[callbackName] = function(data) {
+          resolve(data);
+          delete window[callbackName];
+          document.body.removeChild(script);
+        };
+        var script = document.createElement("script");
+        script.src = url + (url.indexOf("?") >= 0 ? "&" : "?") + "callback=" + callbackName;
+        script.onerror = function() {
+          reject(new Error("Request failed"));
+          delete window[callbackName];
+        };
+        document.body.appendChild(script);
+      });
+    }
 
     function login() {
       var email = document.getElementById("email").value.trim();
@@ -28,7 +49,7 @@
       var url = EXEC_URL + "?action=login&email=" + encodeURIComponent(email) + "&pin=" + encodeURIComponent(pin);
 
       jsonp(url)
-  .then(function(data) {
+        .then(function(data) {
           if (data.success) {
             sessionStorage.setItem("token", data.token);
             sessionStorage.setItem("name", data.name);
@@ -42,23 +63,7 @@
           errorEl.textContent = "Network error — check the console.";
           console.error(err);
         });
-    }function jsonp(url) {
-  return new Promise(function(resolve, reject) {
-    var callbackName = "cb_" + Math.round(Math.random() * 1000000);
-    window[callbackName] = function(data) {
-      resolve(data);
-      delete window[callbackName];
-      document.body.removeChild(script);
-    };
-    var script = document.createElement("script");
-    script.src = url + (url.indexOf("?") >= 0 ? "&" : "?") + "callback=" + callbackName;
-    script.onerror = function() {
-      reject(new Error("Request failed"));
-      delete window[callbackName];
-    };
-    document.body.appendChild(script);
-  });
-}
+    }
   </script>
 </body>
 </html>
