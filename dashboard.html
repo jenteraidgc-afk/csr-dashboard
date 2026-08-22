@@ -3,13 +3,16 @@
 <head>
   <title>CSR Dashboard</title>
   <style>
-    body { font-family: sans-serif; max-width: 600px; margin: 60px auto; padding: 0 16px; }
+    body { font-family: sans-serif; max-width: 700px; margin: 60px auto; padding: 0 16px; }
     #data { margin-top: 12px; padding: 16px; background: #f4f4f4; border-radius: 6px; white-space: pre-wrap; font-family: monospace; font-size: 13px; }
     .record { border-bottom: 1px solid #ddd; padding: 10px 0; }
     .record .score { font-weight: bold; }
     .record .meta { color: #666; font-size: 13px; }
     button { padding: 6px 14px; cursor: pointer; margin-right: 6px; }
+    input, select { padding: 6px; margin-right: 6px; }
     #pageInfo { margin-left: 8px; color: #666; }
+    .controls { margin: 12px 0; padding: 12px; background: #fafafa; border-radius: 6px; }
+    .error { color: #a33; }
   </style>
 </head>
 <body>
@@ -19,7 +22,9 @@
   <h3>Summary</h3>
   <div id="data">Loading...</div>
 
-  <h3>My audit history</h3>
+  <div id="controls" class="controls" style="display:none;"></div>
+
+  <h3>Audit history</h3>
   <div id="details">Loading...</div>
   <div style="margin-top:10px;">
     <button onclick="prevPage()">Previous</button>
@@ -31,6 +36,7 @@
     var EXEC_URL = "https://script.google.com/macros/s/AKfycbyD9esDoJQrcSprufwsEQugkdbUZwSsQ-6eYih1M9b7uVe859yprQD4U6p9g9bj1Kw-/exec";
     var token = sessionStorage.getItem("token");
     var currentPage = 1;
+    var currentRole = null;
 
     // Loads the Apps Script response via a <script> tag instead of fetch(),
     // since Apps Script's ContentService doesn't reliably send CORS headers
@@ -59,10 +65,11 @@
       jsonp(EXEC_URL + "?action=whoami&token=" + encodeURIComponent(token))
         .then(function(data) {
           if (data.valid) {
+            currentRole = data.role;
             document.getElementById("greeting").textContent =
               "Welcome, " + data.name + " (" + data.role + ")";
             loadSummary();
-            loadDetails();
+            renderControls();
           } else {
             sessionStorage.clear();
             window.location.href = "index.html";
@@ -81,21 +88,86 @@
         });
     }
 
+    // --- Role-specific controls above the detail list ---
+    function renderControls() {
+      var el = document.getElementById("controls");
+
+      if (currentRole === "Team Leader" || currentRole === "SME") {
+        el.style.display = "block";
+        el.innerHTML =
+          "Quarter: <input type='text' id='quarterInput' placeholder='e.g. Q3 2025' value=''>" +
+          "<button onclick='applyFilters()'>Load</button>";
+
+      } else if (currentRole === "Admin") {
+        el.style.display = "block";
+        el.innerHTML =
+          "<div>Look up by CSR name: <input type='text' id='csrInput' placeholder='e.g. Miranda, Robin'> " +
+          "<button onclick='applyFilters()'>Load by CSR</button></div>" +
+          "<div style='margin-top:8px;'>Or by team + quarter: " +
+          "<input type='text' id='teamInput' placeholder='Team Leader name'> " +
+          "<input type='text' id='quarterInput2' placeholder='e.g. Q3 2025'> " +
+          "<button onclick='applyFilters()'>Load by Team</button></div>";
+
+      } else {
+        // CSR — no extra controls needed, details load automatically
+        el.style.display = "none";
+        loadDetails();
+      }
+    }
+
+    function applyFilters() {
+      currentPage = 1;
+      loadDetails();
+    }
+
+    function buildDetailsUrl() {
+      var url = EXEC_URL + "?action=details&token=" + encodeURIComponent(token) +
+                 "&page=" + currentPage + "&pageSize=10";
+
+      if (currentRole === "Team Leader" || currentRole === "SME") {
+        var q = document.getElementById("quarterInput").value.trim();
+        if (!q) return null;
+        url += "&quarter=" + encodeURIComponent(q);
+
+      } else if (currentRole === "Admin") {
+        var csr = document.getElementById("csrInput").value.trim();
+        var team = document.getElementById("teamInput").value.trim();
+        var quarter = document.getElementById("quarterInput2").value.trim();
+        if (csr) {
+          url += "&csr=" + encodeURIComponent(csr);
+        } else if (team && quarter) {
+          url += "&team=" + encodeURIComponent(team) + "&quarter=" + encodeURIComponent(quarter);
+        } else {
+          return null;
+        }
+      }
+      return url;
+    }
+
     function loadDetails() {
-      document.getElementById("details").textContent = "Loading...";
-      jsonp(EXEC_URL + "?action=details&token=" + encodeURIComponent(token) + "&page=" + currentPage + "&pageSize=10")
+      var url = buildDetailsUrl();
+      var detailsEl = document.getElementById("details");
+
+      if (!url) {
+        detailsEl.innerHTML = "<span class='error'>Enter the required filter(s) above, then click Load.</span>";
+        document.getElementById("pageInfo").textContent = "";
+        return;
+      }
+
+      detailsEl.textContent = "Loading...";
+      jsonp(url)
         .then(function(data) {
           if (data.error) {
-            document.getElementById("details").textContent = data.error;
+            detailsEl.innerHTML = "<span class='error'>" + data.error + "</span>";
             document.getElementById("pageInfo").textContent = "";
             return;
           }
           if (!data.records || data.records.length === 0) {
-            document.getElementById("details").textContent = "No records found.";
+            detailsEl.textContent = "No records found.";
           } else {
             var html = data.records.map(function(r) {
               return "<div class='record'>" +
-                "<div class='score'>Score: " + (r["Ave Score"] || "-") + "</div>" +
+                "<div class='score'>" + (r["CSR Name"] ? r["CSR Name"] + " &mdash; " : "") + "Score: " + (r["Ave Score"] || "-") + "</div>" +
                 "<div class='meta'>" + (r["Chat Date"] || "") + " &middot; " +
                 (r["Main Category"] || "") + " / " + (r["Sub Category"] || "") + "</div>" +
                 (r["Successes"] ? "<div><strong>Successes:</strong> " + r["Successes"] + "</div>" : "") +
@@ -103,12 +175,12 @@
                 (r["Recommendations"] ? "<div><strong>Recommendations:</strong> " + r["Recommendations"] + "</div>" : "") +
                 "</div>";
             }).join("");
-            document.getElementById("details").innerHTML = html;
+            detailsEl.innerHTML = html;
           }
           document.getElementById("pageInfo").textContent = "Page " + data.page + " of " + data.totalPages + " (" + data.totalRecords + " total)";
         })
         .catch(function(err) {
-          document.getElementById("details").textContent = "Error loading details.";
+          detailsEl.textContent = "Error loading details.";
           console.error(err);
         });
     }
