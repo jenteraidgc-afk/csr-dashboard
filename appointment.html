@@ -2,48 +2,43 @@
 <html>
 <head>
   <title>Appointments</title>
-  <style>
-    body { font-family: sans-serif; max-width: 700px; margin: 60px auto; padding: 0 16px; }
-    .card { border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-bottom: 10px; }
-    .card .title { font-weight: bold; }
-    .card .meta { color: #666; font-size: 13px; margin: 4px 0; }
-    .status { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
-    .status.Scheduled { background: #e0edff; color: #1a4b8c; }
-    .status.Completed { background: #e0f5e0; color: #1a6b1a; }
-    .status.Cancelled { background: #f5e0e0; color: #8c1a1a; }
-    .status.Rescheduled { background: #fff3d6; color: #8c6a1a; }
-    input, textarea, select { display: block; width: 100%; margin-bottom: 8px; padding: 6px; box-sizing: border-box; }
-    button { padding: 6px 14px; cursor: pointer; margin-right: 6px; margin-top: 4px; }
-    .form-box { background: #fafafa; border-radius: 6px; padding: 16px; margin-bottom: 20px; }
-    .error { color: #a33; }
-    .actions { margin-top: 8px; }
-    .edit-box { display: none; margin-top: 10px; padding: 10px; background: #fafafa; border-radius: 6px; }
-    .edit-box.open { display: block; }
-    .edit-row { display: flex; gap: 8px; }
-    .edit-row input { flex: 1; }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <a href="dashboard.html">&larr; Back to dashboard</a>
-  <h2>Appointments</h2>
-
-  <div class="form-box">
-    <h3>New appointment</h3>
-    <input type="date" id="newDate">
-    <input type="time" id="newTime">
-    <input type="text" id="newTitle" placeholder="Title">
-    <textarea id="newDescription" placeholder="Description (optional)" rows="2"></textarea>
-    <input type="text" id="newAssignedTo" placeholder="Assigned to (name)" style="display:none;">
-    <input type="text" id="newTeam" placeholder="Team" style="display:none;">
-    <button onclick="submitCreate()">Create</button>
-    <div id="createError" class="error"></div>
+  <div class="appbar">
+    <div class="brand"><span class="mark">📊</span> CSR Dashboard</div>
+    <div class="nav-links">
+      <a href="dashboard.html">Overview</a>
+      <a href="appointments.html" class="active">Appointments</a>
+      <a href="users.html" id="usersLink" style="display:none;">Users</a>
+    </div>
+    <button class="logout-btn" onclick="logout()">Log out</button>
   </div>
 
-  <div id="list">Loading...</div>
-  <div style="margin-top:10px;">
-    <button onclick="prevPage()">Previous</button>
-    <button onclick="nextPage()">Next</button>
-    <span id="pageInfo"></span>
+  <div class="page">
+    <h1>Appointments</h1>
+
+    <div class="form-box">
+      <h3 style="margin-top:0;">New appointment</h3>
+      <div class="inline-fields">
+        <input type="date" id="newDate">
+        <input type="time" id="newTime">
+      </div>
+      <input type="text" id="newTitle" placeholder="Title">
+      <textarea id="newDescription" placeholder="Description (optional)" rows="2"></textarea>
+      <input type="text" id="newAssignedTo" placeholder="Assigned to (name)" style="display:none;">
+      <input type="text" id="newTeam" placeholder="Team" style="display:none;">
+      <button onclick="submitCreate()">Create appointment</button>
+      <div id="createError" class="error"></div>
+    </div>
+
+    <h3 class="section-label">Upcoming &amp; recent</h3>
+    <div id="list">Loading...</div>
+    <div class="pagination">
+      <button class="secondary" onclick="prevPage()">&larr; Previous</button>
+      <button class="secondary" onclick="nextPage()">Next &rarr;</button>
+      <span id="pageInfo"></span>
+    </div>
   </div>
 
   <script>
@@ -51,7 +46,6 @@
     var token = sessionStorage.getItem("token");
     var currentPage = 1;
     var currentRole = null;
-    var currentRecords = []; // keeps the latest loaded page in memory, so Edit can prefill without another request
 
     function jsonp(url) {
       return new Promise(function(resolve, reject) {
@@ -87,6 +81,7 @@
           }
           if (currentRole === "Admin") {
             document.getElementById("newTeam").style.display = "block";
+            document.getElementById("usersLink").style.display = "inline";
           }
           loadList();
         });
@@ -130,39 +125,44 @@
 
     function loadList() {
       var listEl = document.getElementById("list");
-      listEl.textContent = "Loading...";
+      listEl.innerHTML = "<div class='empty-state'>Loading&hellip;</div>";
 
       jsonp(EXEC_URL + "?action=listAppointments&token=" + encodeURIComponent(token) + "&page=" + currentPage + "&pageSize=10")
         .then(function(data) {
           if (data.error) {
-            listEl.innerHTML = "<span class='error'>" + data.error + "</span>";
+            listEl.innerHTML = "<div class='empty-state error'>" + data.error + "</div>";
             document.getElementById("pageInfo").textContent = "";
             return;
           }
-          currentRecords = data.records || [];
-          if (currentRecords.length === 0) {
-            listEl.textContent = "No appointments found.";
+          var records = data.records || [];
+          if (records.length === 0) {
+            listEl.innerHTML = "<div class='empty-state'>No appointments found.</div>";
           } else {
-            listEl.innerHTML = currentRecords.map(function(a, idx) {
+            listEl.innerHTML = records.map(function(a, idx) {
               return "<div class='card'>" +
-                "<div class='title'>" + a["Title"] + " <span class='status " + a["Status"] + "'>" + a["Status"] + "</span></div>" +
+                "<div class='card-row'>" +
+                "<div class='title'>" + a["Title"] + "</div>" +
+                "<span class='status-tag " + a["Status"] + "'>" + a["Status"] + "</span>" +
+                "</div>" +
                 "<div class='meta'>" + a["Date"] + " " + a["Time"] + " &middot; Assigned to: " + (a["Assigned To"] || "-") + " &middot; Team: " + (a["Team"] || "-") + "</div>" +
                 (a["Description"] ? "<div>" + a["Description"] + "</div>" : "") +
                 "<div class='meta'>Created by " + a["Created By"] + "</div>" +
-                "<div class='actions'>" +
-                "<button onclick=\"changeStatus('" + a["Appointment ID"] + "','Completed')\">Complete</button>" +
-                "<button onclick=\"changeStatus('" + a["Appointment ID"] + "','Cancelled')\">Cancel</button>" +
-                "<button onclick=\"toggleEdit(" + idx + ")\">Reschedule / edit</button>" +
+                "<div class='btn-row'>" +
+                "<button class='secondary' onclick=\"changeStatus('" + a["Appointment ID"] + "','Completed')\">Complete</button>" +
+                "<button class='secondary' onclick=\"changeStatus('" + a["Appointment ID"] + "','Cancelled')\">Cancel</button>" +
+                "<button class='secondary' onclick=\"toggleEdit(" + idx + ")\">Reschedule / edit</button>" +
                 "</div>" +
                 "<div class='edit-box' id='edit-" + idx + "'>" +
-                  "<div class='edit-row'>" +
+                  "<div class='inline-fields'>" +
                     "<input type='date' id='editDate-" + idx + "' value='" + a["Date"] + "'>" +
                     "<input type='time' id='editTime-" + idx + "' value='" + a["Time"] + "'>" +
                   "</div>" +
                   "<input type='text' id='editTitle-" + idx + "' value='" + (a["Title"] || "").replace(/'/g, "&#39;") + "'>" +
                   "<textarea id='editDesc-" + idx + "' rows='2'>" + (a["Description"] || "") + "</textarea>" +
+                  "<div class='btn-row'>" +
                   "<button onclick=\"saveEdit('" + a["Appointment ID"] + "', " + idx + ")\">Save changes</button>" +
-                  "<button onclick=\"toggleEdit(" + idx + ")\">Cancel edit</button>" +
+                  "<button class='secondary' onclick=\"toggleEdit(" + idx + ")\">Cancel edit</button>" +
+                  "</div>" +
                 "</div>" +
                 "</div>";
             }).join("");
@@ -186,8 +186,6 @@
         return;
       }
 
-      // Saving new date/time also flips status to "Rescheduled" automatically,
-      // since that's what your workflow's status list is for.
       var url = EXEC_URL + "?action=updateAppointment&token=" + encodeURIComponent(token) +
                 "&id=" + encodeURIComponent(id) +
                 "&date=" + encodeURIComponent(date) +
@@ -219,6 +217,11 @@
 
     function nextPage() { currentPage++; loadList(); }
     function prevPage() { if (currentPage > 1) { currentPage--; loadList(); } }
+
+    function logout() {
+      sessionStorage.clear();
+      window.location.href = "index.html";
+    }
   </script>
 </body>
 </html>
