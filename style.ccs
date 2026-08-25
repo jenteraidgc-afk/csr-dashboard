@@ -1,0 +1,286 @@
+/* ============================================================
+   CSR Dashboard — shared design system
+   Palette: cool paper background, ink text, steady navy accent.
+   Score badges (green/amber/red) are the visual signature —
+   used consistently everywhere a score or status appears.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap');
+
+:root {
+  --bg: #F3F4F7;
+  --surface: #FFFFFF;
+  --border: #E1E3E9;
+  --text: #14171F;
+  --text-muted: #5B616E;
+
+  --accent: #2D4F8E;
+  --accent-soft: #E8EDF8;
+  --accent-hover: #24406F;
+
+  --good: #1F7A4D;
+  --good-bg: #E4F3EA;
+  --warn: #A6650F;
+  --warn-bg: #FBF0DC;
+  --bad: #B23B3B;
+  --bad-bg: #FBEAEA;
+
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(20, 23, 31, 0.04), 0 1px 8px rgba(20, 23, 31, 0.04);
+
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 48px 20px 80px;
+}
+
+.page.narrow {
+  max-width: 380px;
+  padding-top: 100px;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0 0 4px;
+}
+
+h1 { font-size: 22px; }
+h2 { font-size: 19px; margin-top: 32px; }
+h3 { font-size: 15px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 28px; margin-bottom: 10px; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.nav a { color: var(--text-muted); font-weight: 500; }
+.nav a:hover { color: var(--accent); }
+.nav .sep { color: var(--border); }
+
+.greeting {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+/* --- Cards & panels --- */
+
+.panel, .card, .form-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px 20px;
+  margin-bottom: 12px;
+}
+
+.form-box { background: var(--accent-soft); border-color: transparent; }
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.card .title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.meta {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.field-label {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-top: 6px;
+}
+
+/* --- Score badges — the signature element: color-coded pill,
+       used identically for QA scores, chip status, everything. --- */
+
+.score-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 13px;
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+.score-badge.good { background: var(--good-bg); color: var(--good); }
+.score-badge.warn { background: var(--warn-bg); color: var(--warn); }
+.score-badge.bad { background: var(--bad-bg); color: var(--bad); }
+.score-badge.neutral { background: var(--accent-soft); color: var(--accent); }
+
+.status-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.status-tag.Scheduled, .status-tag.Active { background: var(--accent-soft); color: var(--accent); }
+.status-tag.Completed { background: var(--good-bg); color: var(--good); }
+.status-tag.Cancelled, .status-tag.Inactive { background: var(--bad-bg); color: var(--bad); }
+.status-tag.Rescheduled { background: var(--warn-bg); color: var(--warn); }
+
+/* --- Form elements --- */
+
+input, textarea, select {
+  font-family: var(--font-body);
+  font-size: 14px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.inline-fields {
+  display: flex;
+  gap: 8px;
+}
+.inline-fields input { margin-bottom: 10px; }
+
+button {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 13.5px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+button:hover { background: var(--accent-hover); }
+button.secondary {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--border);
+}
+button.secondary:hover { background: var(--accent-soft); }
+button.danger { background: var(--bad); }
+button.danger:hover { background: #8f2e2e; }
+
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+
+/* --- Utility --- */
+
+.error { color: var(--bad); font-size: 13.5px; margin-top: 6px; }
+.msg { color: var(--good); font-size: 13.5px; margin-top: 6px; }
+.muted { color: var(--text-muted); }
+.summary-box {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  white-space: pre-wrap;
+  color: var(--text-muted);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.autocomplete-wrap { position: relative; }
+.suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  z-index: 20;
+  display: none;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.suggestions div {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13.5px;
+}
+.suggestions div:hover { background: var(--accent-soft); }
+
+.edit-box {
+  display: none;
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--bg);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.edit-box.open { display: block; }
+
+.admin-tool {
+  margin-top: 32px;
+  padding: 16px 18px;
+  background: var(--warn-bg);
+  border-radius: var(--radius);
+}
+.admin-tool h3 { color: var(--warn); margin-top: 0; }
+
+@media (max-width: 480px) {
+  .page { padding: 28px 14px 60px; }
+  .inline-fields { flex-direction: column; }
+}
