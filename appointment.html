@@ -13,10 +13,14 @@
     .status.Cancelled { background: #f5e0e0; color: #8c1a1a; }
     .status.Rescheduled { background: #fff3d6; color: #8c6a1a; }
     input, textarea, select { display: block; width: 100%; margin-bottom: 8px; padding: 6px; box-sizing: border-box; }
-    button { padding: 6px 14px; cursor: pointer; margin-right: 6px; }
+    button { padding: 6px 14px; cursor: pointer; margin-right: 6px; margin-top: 4px; }
     .form-box { background: #fafafa; border-radius: 6px; padding: 16px; margin-bottom: 20px; }
     .error { color: #a33; }
     .actions { margin-top: 8px; }
+    .edit-box { display: none; margin-top: 10px; padding: 10px; background: #fafafa; border-radius: 6px; }
+    .edit-box.open { display: block; }
+    .edit-row { display: flex; gap: 8px; }
+    .edit-row input { flex: 1; }
   </style>
 </head>
 <body>
@@ -47,6 +51,7 @@
     var token = sessionStorage.getItem("token");
     var currentPage = 1;
     var currentRole = null;
+    var currentRecords = []; // keeps the latest loaded page in memory, so Edit can prefill without another request
 
     function jsonp(url) {
       return new Promise(function(resolve, reject) {
@@ -134,10 +139,11 @@
             document.getElementById("pageInfo").textContent = "";
             return;
           }
-          if (!data.records || data.records.length === 0) {
+          currentRecords = data.records || [];
+          if (currentRecords.length === 0) {
             listEl.textContent = "No appointments found.";
           } else {
-            listEl.innerHTML = data.records.map(function(a) {
+            listEl.innerHTML = currentRecords.map(function(a, idx) {
               return "<div class='card'>" +
                 "<div class='title'>" + a["Title"] + " <span class='status " + a["Status"] + "'>" + a["Status"] + "</span></div>" +
                 "<div class='meta'>" + a["Date"] + " " + a["Time"] + " &middot; Assigned to: " + (a["Assigned To"] || "-") + " &middot; Team: " + (a["Team"] || "-") + "</div>" +
@@ -146,13 +152,57 @@
                 "<div class='actions'>" +
                 "<button onclick=\"changeStatus('" + a["Appointment ID"] + "','Completed')\">Complete</button>" +
                 "<button onclick=\"changeStatus('" + a["Appointment ID"] + "','Cancelled')\">Cancel</button>" +
-                "<button onclick=\"changeStatus('" + a["Appointment ID"] + "','Rescheduled')\">Mark Rescheduled</button>" +
+                "<button onclick=\"toggleEdit(" + idx + ")\">Reschedule / edit</button>" +
+                "</div>" +
+                "<div class='edit-box' id='edit-" + idx + "'>" +
+                  "<div class='edit-row'>" +
+                    "<input type='date' id='editDate-" + idx + "' value='" + a["Date"] + "'>" +
+                    "<input type='time' id='editTime-" + idx + "' value='" + a["Time"] + "'>" +
+                  "</div>" +
+                  "<input type='text' id='editTitle-" + idx + "' value='" + (a["Title"] || "").replace(/'/g, "&#39;") + "'>" +
+                  "<textarea id='editDesc-" + idx + "' rows='2'>" + (a["Description"] || "") + "</textarea>" +
+                  "<button onclick=\"saveEdit('" + a["Appointment ID"] + "', " + idx + ")\">Save changes</button>" +
+                  "<button onclick=\"toggleEdit(" + idx + ")\">Cancel edit</button>" +
                 "</div>" +
                 "</div>";
             }).join("");
           }
           document.getElementById("pageInfo").textContent = "Page " + data.page + " of " + data.totalPages + " (" + data.totalRecords + " total)";
         });
+    }
+
+    function toggleEdit(idx) {
+      document.getElementById("edit-" + idx).classList.toggle("open");
+    }
+
+    function saveEdit(id, idx) {
+      var date = document.getElementById("editDate-" + idx).value;
+      var time = document.getElementById("editTime-" + idx).value;
+      var title = document.getElementById("editTitle-" + idx).value.trim();
+      var description = document.getElementById("editDesc-" + idx).value.trim();
+
+      if (!date || !time || !title) {
+        alert("Date, time, and title are required.");
+        return;
+      }
+
+      // Saving new date/time also flips status to "Rescheduled" automatically,
+      // since that's what your workflow's status list is for.
+      var url = EXEC_URL + "?action=updateAppointment&token=" + encodeURIComponent(token) +
+                "&id=" + encodeURIComponent(id) +
+                "&date=" + encodeURIComponent(date) +
+                "&time=" + encodeURIComponent(time) +
+                "&title=" + encodeURIComponent(title) +
+                "&description=" + encodeURIComponent(description) +
+                "&status=" + encodeURIComponent("Rescheduled");
+
+      jsonp(url).then(function(data) {
+        if (data.error) {
+          alert(data.error);
+        } else {
+          loadList();
+        }
+      });
     }
 
     function changeStatus(id, newStatus) {
