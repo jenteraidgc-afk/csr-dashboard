@@ -2,48 +2,52 @@
 <html>
 <head>
   <title>CSR Dashboard</title>
-  <style>
-    body { font-family: sans-serif; max-width: 700px; margin: 60px auto; padding: 0 16px; }
-    #data { margin-top: 12px; padding: 16px; background: #f4f4f4; border-radius: 6px; white-space: pre-wrap; font-family: monospace; font-size: 13px; }
-    .record { border-bottom: 1px solid #ddd; padding: 10px 0; }
-    .record .score { font-weight: bold; }
-    .record .meta { color: #666; font-size: 13px; }
-    button { padding: 6px 14px; cursor: pointer; margin-right: 6px; }
-    input, select { padding: 6px; margin-right: 6px; }
-    #pageInfo { margin-left: 8px; color: #666; }
-    .controls { margin: 12px 0; padding: 12px; background: #fafafa; border-radius: 6px; }
-    .error { color: #a33; }
-    .top-links { margin: 10px 0; }
-    .admin-tool { margin-top: 24px; padding: 12px; background: #fff8e0; border-radius: 6px; }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h2 id="greeting">Checking session...</h2>
-  <div class="top-links">
-    <a href="appointments.html">Appointments</a>
-    <a href="users.html" id="usersLink" style="display:none;"> &middot; Manage users</a>
-    &middot;
-    <button onclick="logout()">Log out</button>
+  <div class="appbar">
+    <div class="brand"><span class="mark">📊</span> CSR Dashboard</div>
+    <div class="nav-links">
+      <a href="dashboard.html" class="active">Overview</a>
+      <a href="appointments.html">Appointments</a>
+      <a href="users.html" id="usersLink" style="display:none;">Users</a>
+    </div>
+    <span class="role-chip" id="roleChip" style="display:none;"></span>
+    <button class="logout-btn" onclick="logout()">Log out</button>
   </div>
 
-  <h3>Summary</h3>
-  <div id="data">Loading...</div>
+  <div class="page">
+    <div class="greeting-row">
+      <div class="avatar-ring" id="avatarInitials">--</div>
+      <div class="greeting-text">
+        <div class="name" id="greetingName">Checking session...</div>
+        <div class="role" id="greetingRole"></div>
+      </div>
+    </div>
 
-  <div id="controls" class="controls" style="display:none;"></div>
+    <h3 class="section-label">Summary</h3>
+    <div id="kpiGrid" class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">Loading</div><div class="kpi-value">&hellip;</div></div>
+    </div>
 
-  <h3>Audit history</h3>
-  <div id="details">Loading...</div>
-  <div style="margin-top:10px;">
-    <button onclick="prevPage()">Previous</button>
-    <button onclick="nextPage()">Next</button>
-    <span id="pageInfo"></span>
-  </div>
+    <div id="controls" class="form-box" style="display:none;"></div>
 
-  <div id="adminTool" class="admin-tool" style="display:none;">
-    <h3>Admin: send a new PIN</h3>
-    <input type="email" id="pinResetEmail" placeholder="user@example.com">
-    <button onclick="sendPin()">Send new PIN by email</button>
-    <div id="pinResetResult"></div>
+    <h3 class="section-label">Audit history</h3>
+    <div id="details">Loading...</div>
+    <div class="pagination">
+      <button class="secondary" onclick="prevPage()">&larr; Previous</button>
+      <button class="secondary" onclick="nextPage()">Next &rarr;</button>
+      <span id="pageInfo"></span>
+    </div>
+
+    <div id="adminTool" class="admin-tool" style="display:none;">
+      <h3>Admin: send a new PIN</h3>
+      <div class="inline-fields">
+        <input type="email" id="pinResetEmail" placeholder="user@example.com">
+        <button onclick="sendPin()" style="white-space:nowrap;">Send new PIN</button>
+      </div>
+      <div id="pinResetResult" class="msg"></div>
+    </div>
   </div>
 
   <script>
@@ -52,9 +56,6 @@
     var currentPage = 1;
     var currentRole = null;
 
-    // Loads the Apps Script response via a <script> tag instead of fetch(),
-    // since Apps Script's ContentService doesn't reliably send CORS headers
-    // and a normal fetch() gets blocked by the browser.
     function jsonp(url) {
       return new Promise(function(resolve, reject) {
         var callbackName = "cb_" + Math.round(Math.random() * 1000000);
@@ -73,6 +74,12 @@
       });
     }
 
+    function initials(name) {
+      if (!name) return "?";
+      var parts = name.split(",")[0].trim().split(" ");
+      return (parts[0][0] || "").toUpperCase();
+    }
+
     if (!token) {
       window.location.href = "index.html";
     } else {
@@ -80,8 +87,13 @@
         .then(function(data) {
           if (data.valid) {
             currentRole = data.role;
-            document.getElementById("greeting").textContent =
-              "Welcome, " + data.name + " (" + data.role + ")";
+            document.getElementById("avatarInitials").textContent = initials(data.name);
+            document.getElementById("greetingName").textContent = data.name;
+            document.getElementById("greetingRole").textContent = data.role;
+            var chip = document.getElementById("roleChip");
+            chip.textContent = data.role;
+            chip.style.display = "inline-block";
+
             loadSummary();
             renderControls();
             if (currentRole === "Admin") {
@@ -95,13 +107,80 @@
         });
     }
 
+    // --- KPI rendering: turns the summary response into stat cards
+    //     instead of a raw JSON dump. Shape differs by role. ---
+    function scoreClass(score) {
+      var n = parseFloat(score);
+      if (isNaN(n)) return "";
+      if (n >= 85) return "good";
+      if (n >= 70) return "warn";
+      return "bad";
+    }
+
+    function kpiCard(label, value, cls, sub) {
+      return "<div class='kpi-card'>" +
+        "<div class='kpi-label'>" + label + "</div>" +
+        "<div class='kpi-value" + (cls ? " " + cls : "") + "'>" + value + "</div>" +
+        (sub ? "<div class='kpi-sub'>" + sub + "</div>" : "") +
+        "</div>";
+    }
+
     function loadSummary() {
       jsonp(EXEC_URL + "?action=summary&token=" + encodeURIComponent(token))
         .then(function(data) {
-          document.getElementById("data").textContent = JSON.stringify(data, null, 2);
+          var grid = document.getElementById("kpiGrid");
+
+          if (data.error) {
+            grid.innerHTML = "<div class='kpi-card'><div class='kpi-label'>Error</div><div class='kpi-value bad' style='font-size:15px;'>" + data.error + "</div></div>";
+            return;
+          }
+
+          if (currentRole === "Admin") {
+            var teamCount = Object.keys(data.perTeamAverage || {}).length;
+            grid.innerHTML =
+              kpiCard("Org average", (data.orgAverage != null ? data.orgAverage : "-"), scoreClass(data.orgAverage)) +
+              kpiCard("Total audits", data.totalAudits != null ? data.totalAudits : "-", "accent") +
+              kpiCard("Teams tracked", teamCount, "accent") +
+              kpiCard("Last synced", new Date(data.lastSynced).toLocaleString(), "", "auto-refreshes every 15\u201330 min");
+
+            // team breakdown table
+            var teamRows = Object.keys(data.perTeamAverage || {}).map(function(t) {
+              return "<div class='row'><span class='k'>" + t + "</span><span class='v'>" + data.perTeamAverage[t] + "</span></div>";
+            }).join("");
+            if (teamRows) {
+              grid.innerHTML += "";
+              document.getElementById("kpiGrid").insertAdjacentHTML("afterend",
+                "<div class='mini-table' id='teamBreakdown'>" + teamRows + "</div>");
+            }
+
+          } else if (currentRole === "Team Leader" || currentRole === "SME") {
+            var quarters = data.quarterlyAverages || {};
+            var quarterKeys = Object.keys(quarters);
+            var latestQ = quarterKeys[quarterKeys.length - 1];
+            var latestScore = latestQ ? quarters[latestQ] : null;
+
+            grid.innerHTML =
+              kpiCard("Latest quarter avg", latestScore != null ? latestScore : "-", scoreClass(latestScore), latestQ || "") +
+              kpiCard("Org total audits", data.orgTotalAudits != null ? data.orgTotalAudits : "-", "accent") +
+              kpiCard("Quarters tracked", quarterKeys.length, "accent") +
+              kpiCard("Last synced", new Date(data.lastSynced).toLocaleString(), "", "");
+
+            var qRows = quarterKeys.map(function(q) {
+              return "<div class='row'><span class='k'>" + q + "</span><span class='v'>" + quarters[q] + "</span></div>";
+            }).join("");
+            if (qRows) {
+              document.getElementById("kpiGrid").insertAdjacentHTML("afterend",
+                "<div class='mini-table'>" + qRows + "</div>");
+            }
+
+          } else if (currentRole === "CSR") {
+            grid.innerHTML =
+              kpiCard("My average score", data.myAverage != null ? data.myAverage : "No data yet", scoreClass(data.myAverage)) +
+              kpiCard("Last synced", new Date(data.lastSynced).toLocaleString(), "", "");
+          }
         })
         .catch(function(err) {
-          document.getElementById("data").textContent = "Error loading summary.";
+          document.getElementById("kpiGrid").innerHTML = "<div class='kpi-card'><div class='kpi-label'>Error</div><div class='kpi-value bad' style='font-size:15px;'>Failed to load</div></div>";
           console.error(err);
         });
     }
@@ -113,36 +192,38 @@
       if (currentRole === "Team Leader" || currentRole === "SME") {
         el.style.display = "block";
         el.innerHTML =
-          "Quarter: <input type='text' id='quarterInput' placeholder='e.g. Q3 2025' value=''>" +
-          "<button onclick='applyFilters()'>Load</button>";
+          "<div class='field-label'>Quarter</div>" +
+          "<div class='inline-fields'>" +
+          "<input type='text' id='quarterInput' placeholder='e.g. Q3 2025'>" +
+          "<button onclick='applyFilters()' style='white-space:nowrap;'>Load</button>" +
+          "</div>";
 
       } else if (currentRole === "Admin") {
         el.style.display = "block";
         el.innerHTML =
-          "<div style='position:relative;'>Look up by CSR name: " +
-          "<input type='text' id='csrInput' placeholder='start typing a name...' autocomplete='off'> " +
-          "<button onclick='applyFilters()'>Load by CSR</button>" +
-          "<div id='csrSuggestions' style='position:absolute; background:#fff; border:1px solid #ccc; border-radius:4px; z-index:10; display:none;'></div>" +
+          "<div class='field-label'>Look up by CSR name</div>" +
+          "<div class='inline-fields autocomplete-wrap'>" +
+          "<input type='text' id='csrInput' placeholder='start typing a name...' autocomplete='off'>" +
+          "<button onclick='applyFilters()' style='white-space:nowrap;'>Load</button>" +
+          "<div id='csrSuggestions' class='suggestions'></div>" +
           "</div>" +
-          "<div style='margin-top:8px; position:relative;'>Or by team + quarter: " +
-          "<input type='text' id='teamInput' placeholder='start typing a team...' autocomplete='off'> " +
-          "<input type='text' id='quarterInput2' placeholder='e.g. Q3 2025'> " +
-          "<button onclick='applyFilters()'>Load by Team</button>" +
-          "<div id='teamSuggestions' style='position:absolute; background:#fff; border:1px solid #ccc; border-radius:4px; z-index:10; display:none;'></div>" +
+          "<div class='field-label'>Or by team + quarter</div>" +
+          "<div class='inline-fields autocomplete-wrap'>" +
+          "<input type='text' id='teamInput' placeholder='start typing a team...' autocomplete='off'>" +
+          "<input type='text' id='quarterInput2' placeholder='e.g. Q3 2025'>" +
+          "<button onclick='applyFilters()' style='white-space:nowrap;'>Load</button>" +
+          "<div id='teamSuggestions' class='suggestions'></div>" +
           "</div>";
 
         wireAutocomplete("csrInput", "csrSuggestions", "searchCsr");
         wireAutocomplete("teamInput", "teamSuggestions", "searchTeam");
 
       } else {
-        // CSR — no extra controls needed, details load automatically
         el.style.display = "none";
         loadDetails();
       }
     }
 
-    // Debounced (400ms) server-side search-as-you-type, backing an
-    // autocomplete dropdown under the given input.
     function wireAutocomplete(inputId, suggestionsId, action) {
       var input = document.getElementById(inputId);
       var box = document.getElementById(suggestionsId);
@@ -161,7 +242,7 @@
                 return;
               }
               box.innerHTML = data.matches.map(function(name) {
-                return "<div style='padding:6px 10px; cursor:pointer;' onmousedown=\"selectSuggestion('" + inputId + "','" + suggestionsId + "','" + name.replace(/'/g, "\\'") + "')\">" + name + "</div>";
+                return "<div onmousedown=\"selectSuggestion('" + inputId + "','" + suggestionsId + "','" + name.replace(/'/g, "\\'") + "')\">" + name + "</div>";
               }).join("");
               box.style.display = "block";
             });
@@ -169,7 +250,7 @@
       });
 
       input.addEventListener("blur", function() {
-        setTimeout(function() { box.style.display = "none"; }, 150); // slight delay so the click above still registers
+        setTimeout(function() { box.style.display = "none"; }, 150);
       });
     }
 
@@ -212,27 +293,31 @@
       var detailsEl = document.getElementById("details");
 
       if (!url) {
-        detailsEl.innerHTML = "<span class='error'>Enter the required filter(s) above, then click Load.</span>";
+        detailsEl.innerHTML = "<div class='empty-state'>Enter the required filter(s) above, then click Load.</div>";
         document.getElementById("pageInfo").textContent = "";
         return;
       }
 
-      detailsEl.textContent = "Loading...";
+      detailsEl.innerHTML = "<div class='empty-state'>Loading&hellip;</div>";
       jsonp(url)
         .then(function(data) {
           if (data.error) {
-            detailsEl.innerHTML = "<span class='error'>" + data.error + "</span>";
+            detailsEl.innerHTML = "<div class='empty-state error'>" + data.error + "</div>";
             document.getElementById("pageInfo").textContent = "";
             return;
           }
           if (!data.records || data.records.length === 0) {
-            detailsEl.textContent = "No records found.";
+            detailsEl.innerHTML = "<div class='empty-state'>No records found.</div>";
           } else {
             var html = data.records.map(function(r) {
-              return "<div class='record'>" +
-                "<div class='score'>" + (r["CSR Name"] ? r["CSR Name"] + " &mdash; " : "") + "Score: " + (r["Ave Score"] || "-") + "</div>" +
-                "<div class='meta'>" + (r["Chat Date"] || "") + " &middot; " +
-                (r["Main Category"] || "") + " / " + (r["Sub Category"] || "") + "</div>" +
+              return "<div class='card'>" +
+                "<div class='card-row'>" +
+                "<div style='display:flex; align-items:center; gap:12px;'>" +
+                "<div class='score-ring " + (scoreClass(r["Ave Score"]) || "neutral") + "'>" + (r["Ave Score"] || "-") + "</div>" +
+                "<div><div class='title'>" + (r["CSR Name"] || "") + "</div>" +
+                "<div class='meta'>" + (r["Chat Date"] || "") + " &middot; " + (r["Main Category"] || "") + " / " + (r["Sub Category"] || "") + "</div></div>" +
+                "</div>" +
+                "</div>" +
                 (r["Successes"] ? "<div><strong>Successes:</strong> " + r["Successes"] + "</div>" : "") +
                 (r["Opportunities"] ? "<div><strong>Opportunities:</strong> " + r["Opportunities"] + "</div>" : "") +
                 (r["Recommendations"] ? "<div><strong>Recommendations:</strong> " + r["Recommendations"] + "</div>" : "") +
@@ -243,7 +328,7 @@
           document.getElementById("pageInfo").textContent = "Page " + data.page + " of " + data.totalPages + " (" + data.totalRecords + " total)";
         })
         .catch(function(err) {
-          detailsEl.textContent = "Error loading details.";
+          detailsEl.innerHTML = "<div class='empty-state error'>Error loading details.</div>";
           console.error(err);
         });
     }
