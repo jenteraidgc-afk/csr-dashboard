@@ -1,27 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>CSR Dashboard — Login</title>
-  <style>
-    body { font-family: sans-serif; max-width: 320px; margin: 80px auto; }
-    input { display: block; width: 100%; margin-bottom: 12px; padding: 8px; box-sizing: border-box; }
-    button { width: 100%; padding: 10px; cursor: pointer; }
-    #error { color: red; margin-top: 12px; }
-  </style>
+  <title>CSR Dashboard — Sign in</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h2>CSR Dashboard</h2>
-  <input type="email" id="email" placeholder="Email">
-  <input type="text" id="pin" placeholder="PIN" maxlength="6">
-  <button onclick="login()">Sign in</button>
-  <div id="error"></div>
+  <div class="center-screen">
+    <div class="page narrow">
+      <div style="text-align:center; margin-bottom:24px;">
+        <div class="avatar-ring" style="margin:0 auto 14px; width:52px; height:52px; font-size:20px;">CS</div>
+        <h1>CSR Dashboard</h1>
+        <p class="muted">Sign in with your email and PIN</p>
+      </div>
+
+      <div class="panel">
+        <input type="email" id="email" placeholder="Email">
+        <input type="text" id="pin" placeholder="6-digit PIN" maxlength="6">
+        <button onclick="login()" style="width:100%;">Sign in</button>
+        <div id="error" class="error"></div>
+      </div>
+    </div>
+  </div>
 
   <script>
     var EXEC_URL = "https://script.google.com/macros/s/AKfycbyD9esDoJQrcSprufwsEQugkdbUZwSsQ-6eYih1M9b7uVe859yprQD4U6p9g9bj1Kw-/exec";
 
-    // Loads the Apps Script response via a <script> tag instead of fetch(),
-    // since Apps Script's ContentService doesn't reliably send CORS headers
-    // and a normal fetch() gets blocked by the browser.
     function jsonp(url) {
       return new Promise(function(resolve, reject) {
         var callbackName = "cb_" + Math.round(Math.random() * 1000000);
