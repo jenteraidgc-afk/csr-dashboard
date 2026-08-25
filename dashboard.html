@@ -20,7 +20,9 @@
 <body>
   <h2 id="greeting">Checking session...</h2>
   <div class="top-links">
-    <a href="appointments.html">Appointments</a> &middot;
+    <a href="appointments.html">Appointments</a>
+    <a href="users.html" id="usersLink" style="display:none;"> &middot; Manage users</a>
+    &middot;
     <button onclick="logout()">Log out</button>
   </div>
 
@@ -84,6 +86,7 @@
             renderControls();
             if (currentRole === "Admin") {
               document.getElementById("adminTool").style.display = "block";
+              document.getElementById("usersLink").style.display = "inline";
             }
           } else {
             sessionStorage.clear();
