@@ -119,18 +119,63 @@
       } else if (currentRole === "Admin") {
         el.style.display = "block";
         el.innerHTML =
-          "<div>Look up by CSR name: <input type='text' id='csrInput' placeholder='e.g. Miranda, Robin'> " +
-          "<button onclick='applyFilters()'>Load by CSR</button></div>" +
-          "<div style='margin-top:8px;'>Or by team + quarter: " +
-          "<input type='text' id='teamInput' placeholder='Team Leader name'> " +
+          "<div style='position:relative;'>Look up by CSR name: " +
+          "<input type='text' id='csrInput' placeholder='start typing a name...' autocomplete='off'> " +
+          "<button onclick='applyFilters()'>Load by CSR</button>" +
+          "<div id='csrSuggestions' style='position:absolute; background:#fff; border:1px solid #ccc; border-radius:4px; z-index:10; display:none;'></div>" +
+          "</div>" +
+          "<div style='margin-top:8px; position:relative;'>Or by team + quarter: " +
+          "<input type='text' id='teamInput' placeholder='start typing a team...' autocomplete='off'> " +
           "<input type='text' id='quarterInput2' placeholder='e.g. Q3 2025'> " +
-          "<button onclick='applyFilters()'>Load by Team</button></div>";
+          "<button onclick='applyFilters()'>Load by Team</button>" +
+          "<div id='teamSuggestions' style='position:absolute; background:#fff; border:1px solid #ccc; border-radius:4px; z-index:10; display:none;'></div>" +
+          "</div>";
+
+        wireAutocomplete("csrInput", "csrSuggestions", "searchCsr");
+        wireAutocomplete("teamInput", "teamSuggestions", "searchTeam");
 
       } else {
         // CSR — no extra controls needed, details load automatically
         el.style.display = "none";
         loadDetails();
       }
+    }
+
+    // Debounced (400ms) server-side search-as-you-type, backing an
+    // autocomplete dropdown under the given input.
+    function wireAutocomplete(inputId, suggestionsId, action) {
+      var input = document.getElementById(inputId);
+      var box = document.getElementById(suggestionsId);
+      var debounceTimer = null;
+
+      input.addEventListener("input", function() {
+        clearTimeout(debounceTimer);
+        var query = input.value.trim();
+        if (!query) { box.style.display = "none"; return; }
+
+        debounceTimer = setTimeout(function() {
+          jsonp(EXEC_URL + "?action=" + action + "&token=" + encodeURIComponent(token) + "&q=" + encodeURIComponent(query))
+            .then(function(data) {
+              if (!data.matches || data.matches.length === 0) {
+                box.style.display = "none";
+                return;
+              }
+              box.innerHTML = data.matches.map(function(name) {
+                return "<div style='padding:6px 10px; cursor:pointer;' onmousedown=\"selectSuggestion('" + inputId + "','" + suggestionsId + "','" + name.replace(/'/g, "\\'") + "')\">" + name + "</div>";
+              }).join("");
+              box.style.display = "block";
+            });
+        }, 400);
+      });
+
+      input.addEventListener("blur", function() {
+        setTimeout(function() { box.style.display = "none"; }, 150); // slight delay so the click above still registers
+      });
+    }
+
+    function selectSuggestion(inputId, suggestionsId, name) {
+      document.getElementById(inputId).value = name;
+      document.getElementById(suggestionsId).style.display = "none";
     }
 
     function applyFilters() {
