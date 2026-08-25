@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>User Management</title>
+  <style>
+    body { font-family: sans-serif; max-width: 700px; margin: 60px auto; padding: 0 16px; }
+    .card { border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .card .info { flex: 1; min-width: 200px; }
+    .card .name { font-weight: bold; }
+    .card .meta { color: #666; font-size: 13px; }
+    .status-tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+    .status-tag.Active { background: #e0f5e0; color: #1a6b1a; }
+    .status-tag.Inactive { background: #f0f0f0; color: #666; }
+    input, select { padding: 6px; margin-right: 6px; }
+    button { padding: 6px 14px; cursor: pointer; margin-right: 6px; }
+    .form-box { background: #fafafa; border-radius: 6px; padding: 16px; margin-bottom: 20px; }
+    .error { color: #a33; }
+    .msg { color: #1a6b1a; }
+  </style>
+</head>
+<body>
+  <a href="dashboard.html">&larr; Back to dashboard</a>
+  <h2>User Management</h2>
+  <p id="accessDenied" class="error" style="display:none;">Admin access required.</p>
+
+  <div id="content" style="display:none;">
+    <div class="form-box">
+      <h3>Add user</h3>
+      <input type="text" id="newName" placeholder="Full name">
+      <input type="email" id="newEmail" placeholder="Email">
+      <select id="newRole">
+        <option value="Admin">Admin</option>
+        <option value="Team Leader">Team Leader</option>
+        <option value="SME">SME</option>
+        <option value="CSR" selected>CSR</option>
+      </select>
+      <button onclick="submitCreate()">Add &amp; email PIN</button>
+      <div id="createMsg"></div>
+    </div>
+
+    <div id="userList">Loading...</div>
+  </div>
+
+  <script>
+    var EXEC_URL = "https://script.google.com/macros/s/AKfycbyD9esDoJQrcSprufwsEQugkdbUZwSsQ-6eYih1M9b7uVe859yprQD4U6p9g9bj1Kw-/exec";
+    var token = sessionStorage.getItem("token");
+
+    function jsonp(url) {
+      return new Promise(function(resolve, reject) {
+        var callbackName = "cb_" + Math.round(Math.random() * 1000000);
+        window[callbackName] = function(data) {
+          resolve(data);
+          delete window[callbackName];
+          document.body.removeChild(script);
+        };
+        var script = document.createElement("script");
+        script.src = url + (url.indexOf("?") >= 0 ? "&" : "?") + "callback=" + callbackName;
+        script.onerror = function() {
+          reject(new Error("Request failed"));
+          delete window[callbackName];
+        };
+        document.body.appendChild(script);
+      });
+    }
+
+    if (!token) {
+      window.location.href = "index.html";
+    } else {
+      jsonp(EXEC_URL + "?action=whoami&token=" + encodeURIComponent(token))
+        .then(function(data) {
+          if (!data.valid) {
+            sessionStorage.clear();
+            window.location.href = "index.html";
+            return;
+          }
+          if (data.role !== "Admin") {
+            document.getElementById("accessDenied").style.display = "block";
+            return;
+          }
+          document.getElementById("content").style.display = "block";
+          loadUsers();
+        });
+    }
+
+    function submitCreate() {
+      var msgEl = document.getElementById("createMsg");
+      msgEl.textContent = "";
+      msgEl.className = "";
+
+      var name = document.getElementById("newName").value.trim();
+      var email = document.getElementById("newEmail").value.trim();
+      var role = document.getElementById("newRole").value;
+
+      if (!name || !email) {
+        msgEl.textContent = "Name and email are required.";
+        msgEl.className = "error";
+        return;
+      }
+
+      var url = EXEC_URL + "?action=createUser&token=" + encodeURIComponent(token) +
+                "&name=" + encodeURIComponent(name) +
+                "&email=" + encodeURIComponent(email) +
+                "&role=" + encodeURIComponent(role);
+
+      jsonp(url).then(function(data) {
+        if (data.error) {
+          msgEl.textContent = data.error;
+          msgEl.className = "error";
+        } else {
+          msgEl.textContent = data.message;
+          msgEl.className = "msg";
+          document.getElementById("newName").value = "";
+          document.getElementById("newEmail").value = "";
+          loadUsers();
+        }
+      });
+    }
+
+    function loadUsers() {
+      var listEl = document.getElementById("userList");
+      listEl.textContent = "Loading...";
+
+      jsonp(EXEC_URL + "?action=listUsers&token=" + encodeURIComponent(token))
+        .then(function(data) {
+          if (data.error) {
+            listEl.innerHTML = "<span class='error'>" + data.error + "</span>";
+            return;
+          }
+          if (!data.users || data.users.length === 0) {
+            listEl.textContent = "No users found.";
+            return;
+          }
+          listEl.innerHTML = data.users.map(function(u) {
+            var safeEmail = u.email.replace(/'/g, "\\'");
+            return "<div class='card'>" +
+              "<div class='info'>" +
+                "<div class='name'>" + u.name + " <span class='status-tag " + u.status + "'>" + u.status + "</span></div>" +
+                "<div class='meta'>" + u.email + " &middot; " + u.role + "</div>" +
+              "</div>" +
+              "<div>" +
+                "<select onchange=\"changeRole('" + safeEmail + "', this.value)\">" +
+                  ["Admin", "Team Leader", "SME", "CSR"].map(function(r) {
+                    return "<option value='" + r + "'" + (r === u.role ? " selected" : "") + ">" + r + "</option>";
+                  }).join("") +
+                "</select>" +
+                "<button onclick=\"toggleStatus('" + safeEmail + "', '" + (u.status === "Active" ? "Inactive" : "Active") + "')\">" +
+                  (u.status === "Active" ? "Deactivate" : "Activate") +
+                "</button>" +
+              "</div>" +
+            "</div>";
+          }).join("");
+        });
+    }
+
+    function changeRole(email, newRole) {
+      jsonp(EXEC_URL + "?action=updateUser&token=" + encodeURIComponent(token) +
+            "&email=" + encodeURIComponent(email) + "&role=" + encodeURIComponent(newRole))
+        .then(function(data) {
+          if (data.error) alert(data.error);
+          loadUsers();
+        });
+    }
+
+    function toggleStatus(email, newStatus) {
+      jsonp(EXEC_URL + "?action=updateUser&token=" + encodeURIComponent(token) +
+            "&email=" + encodeURIComponent(email) + "&status=" + encodeURIComponent(newStatus))
+        .then(function(data) {
+          if (data.error) alert(data.error);
+          loadUsers();
+        });
+    }
+  </script>
+</body>
+</html>
