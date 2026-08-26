@@ -6,7 +6,7 @@
 </head>
 <body>
   <div class="appbar">
-    <div class="brand"><span class="mark">📊</span> CSR Dashboard</div>
+    <div class="brand">CSR Dashboard</div>
     <div class="nav-links">
       <a href="dashboard.html">Overview</a>
       <a href="appointments.html" class="active">Appointments</a>
@@ -38,6 +38,14 @@
       <button class="secondary" onclick="prevPage()">&larr; Previous</button>
       <button class="secondary" onclick="nextPage()">Next &rarr;</button>
       <span id="pageInfo"></span>
+      <span style="flex:1;"></span>
+      <label class="muted" style="font-size:12.5px;">Per page:
+        <select id="pageSizeSelect" onchange="changePageSize()" style="width:auto; display:inline-block; margin-bottom:0; margin-left:4px;">
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </label>
     </div>
   </div>
 
@@ -45,6 +53,7 @@
     var EXEC_URL = "https://script.google.com/macros/s/AKfycbyD9esDoJQrcSprufwsEQugkdbUZwSsQ-6eYih1M9b7uVe859yprQD4U6p9g9bj1Kw-/exec";
     var token = sessionStorage.getItem("token");
     var currentPage = 1;
+    var currentPageSize = 25;
     var currentRole = null;
 
     function jsonp(url) {
@@ -127,7 +136,7 @@
       var listEl = document.getElementById("list");
       listEl.innerHTML = "<div class='empty-state'>Loading&hellip;</div>";
 
-      jsonp(EXEC_URL + "?action=listAppointments&token=" + encodeURIComponent(token) + "&page=" + currentPage + "&pageSize=10")
+      jsonp(EXEC_URL + "?action=listAppointments&token=" + encodeURIComponent(token) + "&page=" + currentPage + "&pageSize=" + currentPageSize)
         .then(function(data) {
           if (data.error) {
             listEl.innerHTML = "<div class='empty-state error'>" + data.error + "</div>";
@@ -217,6 +226,12 @@
 
     function nextPage() { currentPage++; loadList(); }
     function prevPage() { if (currentPage > 1) { currentPage--; loadList(); } }
+
+    function changePageSize() {
+      currentPageSize = parseInt(document.getElementById("pageSizeSelect").value, 10);
+      currentPage = 1;
+      loadList();
+    }
 
     function logout() {
       sessionStorage.clear();
