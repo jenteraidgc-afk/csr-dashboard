@@ -139,6 +139,8 @@
             var teamCount = Object.keys(data.perTeamAverage || {}).length;
             grid.innerHTML =
               kpiCard("Org average", (data.orgAverage != null ? data.orgAverage : "-"), scoreClass(data.orgAverage)) +
+              kpiCard("Pass rate", data.orgPassRate != null ? data.orgPassRate + "%" : "-", "good", "\u2265" + data.passRateThreshold + " counts as Pass") +
+              kpiCard("Fail rate", data.orgFailRate != null ? data.orgFailRate + "%" : "-", "bad") +
               kpiCard("Total audits", data.totalAudits != null ? data.totalAudits : "-", "accent") +
               kpiCard("Teams tracked", teamCount, "accent") +
               kpiCard("Last synced", new Date(data.lastSynced).toLocaleString(), "", "auto-refreshes every 15\u201330 min");
@@ -161,6 +163,8 @@
 
             grid.innerHTML =
               kpiCard("Latest quarter avg", latestScore != null ? latestScore : "-", scoreClass(latestScore), latestQ || "") +
+              kpiCard("Team pass rate", data.teamPassRate != null ? data.teamPassRate + "%" : "-", "good", "\u2265" + data.passRateThreshold + " counts as Pass") +
+              kpiCard("Team fail rate", data.teamFailRate != null ? data.teamFailRate + "%" : "-", "bad") +
               kpiCard("Org total audits", data.orgTotalAudits != null ? data.orgTotalAudits : "-", "accent") +
               kpiCard("Quarters tracked", quarterKeys.length, "accent") +
               kpiCard("Last synced", new Date(data.lastSynced).toLocaleString(), "", "");
@@ -176,6 +180,8 @@
           } else if (currentRole === "CSR") {
             grid.innerHTML =
               kpiCard("My average score", data.myAverage != null ? data.myAverage : "No data yet", scoreClass(data.myAverage)) +
+              kpiCard("My pass rate", data.myPassRate != null ? data.myPassRate + "%" : "-", "good", data.myPassRate != null ? "\u2265" + data.passRateThreshold + " counts as Pass" : "") +
+              kpiCard("My fail rate", data.myFailRate != null ? data.myFailRate + "%" : "-", "bad") +
               kpiCard("Last synced", new Date(data.lastSynced).toLocaleString(), "", "");
           }
         })
