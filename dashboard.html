@@ -38,6 +38,14 @@
       <button class="secondary" onclick="prevPage()">&larr; Previous</button>
       <button class="secondary" onclick="nextPage()">Next &rarr;</button>
       <span id="pageInfo"></span>
+      <span style="flex:1;"></span>
+      <label class="muted" style="font-size:12.5px;">Per page:
+        <select id="pageSizeSelect" onchange="changePageSize()" style="width:auto; display:inline-block; margin-bottom:0; margin-left:4px;">
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </label>
     </div>
 
     <div id="adminTool" class="admin-tool" style="display:none;">
@@ -54,6 +62,7 @@
     var EXEC_URL = "https://script.google.com/macros/s/AKfycbyD9esDoJQrcSprufwsEQugkdbUZwSsQ-6eYih1M9b7uVe859yprQD4U6p9g9bj1Kw-/exec";
     var token = sessionStorage.getItem("token");
     var currentPage = 1;
+    var currentPageSize = 25;
     var currentRole = null;
 
     function jsonp(url) {
@@ -272,7 +281,7 @@
 
     function buildDetailsUrl() {
       var url = EXEC_URL + "?action=details&token=" + encodeURIComponent(token) +
-                 "&page=" + currentPage + "&pageSize=10";
+                 "&page=" + currentPage + "&pageSize=" + currentPageSize;
 
       if (currentRole === "Team Leader" || currentRole === "SME") {
         var q = document.getElementById("quarterInput").value.trim();
@@ -341,6 +350,12 @@
 
     function nextPage() { currentPage++; loadDetails(); }
     function prevPage() { if (currentPage > 1) { currentPage--; loadDetails(); } }
+
+    function changePageSize() {
+      currentPageSize = parseInt(document.getElementById("pageSizeSelect").value, 10);
+      currentPage = 1;
+      loadDetails();
+    }
 
     function sendPin() {
       var email = document.getElementById("pinResetEmail").value.trim();
