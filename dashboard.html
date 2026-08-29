@@ -1,63 +1,130 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>CSR Dashboard</title>
+  <title>CSR Dashboard — Overview</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="appbar">
-    <div class="brand">CSR Dashboard</div>
-    <div class="nav-links">
-      <a href="dashboard.html" class="active">Overview</a>
-      <a href="appointments.html">Appointments</a>
-      <a href="users.html" id="usersLink" style="display:none;">Users</a>
-    </div>
-    <span class="role-chip" id="roleChip" style="display:none;"></span>
-    <button class="logout-btn" onclick="logout()">Log out</button>
-  </div>
-
-  <div class="page">
-    <div class="greeting-row">
-      <div class="avatar-ring" id="avatarInitials">--</div>
-      <div class="greeting-text">
-        <div class="name" id="greetingName">Checking session...</div>
-        <div class="role" id="greetingRole"></div>
+  <div class="app-shell">
+    <div class="sidebar">
+      <div class="sidebar-brand">
+        <div class="mark">CS</div>
+        <div class="label"><div class="t">Audit CRM</div><div class="s">Quality Assurance</div></div>
+      </div>
+      <div class="sidebar-nav">
+        <a href="dashboard.html" class="active">
+          <span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>
+          Overview
+        </a>
+        <a href="appointments.html">
+          <span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>
+          Appointments
+        </a>
+        <a href="users.html" id="usersLink" style="display:none;">
+          <span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6"/><circle cx="18" cy="8.5" r="2.5"/><path d="M16 14.2c2.6.4 4.5 2.4 4.5 5.3"/></svg></span>
+          Users
+        </a>
+      </div>
+      <div class="sidebar-footer">
+        <div class="user-row">
+          <div class="avatar" id="avatarInitials">--</div>
+          <div style="min-width:0;">
+            <div class="name" id="greetingName">&nbsp;</div>
+            <span class="role-badge" id="roleChip"></span>
+          </div>
+        </div>
+        <button class="logout-btn" onclick="logout()">Log out</button>
       </div>
     </div>
 
-    <h3 class="section-label">Summary</h3>
-    <div id="kpiGrid" class="kpi-grid">
-      <div class="kpi-card"><div class="kpi-label">Loading</div><div class="kpi-value">&hellip;</div></div>
-    </div>
-
-    <div id="controls" class="form-box" style="display:none;"></div>
-
-    <h3 class="section-label">Audit history</h3>
-    <div id="details">Loading...</div>
-    <div class="pagination">
-      <button class="secondary" onclick="prevPage()">&larr; Previous</button>
-      <button class="secondary" onclick="nextPage()">Next &rarr;</button>
-      <span id="pageInfo"></span>
-      <span style="flex:1;"></span>
-      <label class="muted" style="font-size:12.5px;">Per page:
-        <select id="pageSizeSelect" onchange="changePageSize()" style="width:auto; display:inline-block; margin-bottom:0; margin-left:4px;">
-          <option value="25">25</option>
-          <option value="50">50</option>
-          <option value="100">100</option>
-        </select>
-      </label>
-    </div>
-
-    <div id="adminTool" class="admin-tool" style="display:none;">
-      <h3>Admin: send a new PIN</h3>
-      <div class="inline-fields">
-        <input type="email" id="pinResetEmail" placeholder="user@example.com">
-        <button onclick="sendPin()" style="white-space:nowrap;">Send new PIN</button>
+    <div class="content">
+      <div class="topbar">
+        <div>
+          <h1>Dashboard Overview</h1>
+          <div class="subtitle" id="syncNote">Loading&hellip;</div>
+        </div>
       </div>
-      <div id="pinResetResult" class="msg"></div>
+
+      <div class="page-body">
+
+        <div class="kpi-grid" id="kpiGrid">
+          <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">Loading</div><div class="kpi-value">&hellip;</div></div></div>
+        </div>
+
+        <div id="teamKpiRow" class="kpi-grid" style="display:none;"></div>
+
+        <div class="panel-grid" id="leaderboardGrid" style="display:none;">
+          <div class="panel">
+            <div class="panel-head"><span class="dot good"></span> Top performers</div>
+            <div id="topPerformers"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><span class="dot bad"></span> Needs coaching</div>
+            <div id="needsCoaching"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><span class="dot accent"></span> Team leaders snapshot</div>
+            <div id="teamSnapshot"></div>
+          </div>
+        </div>
+
+        <div class="chart-panel" id="chartPanel" style="display:none;">
+          <div class="panel-head">
+            <span><span class="dot purple"></span> Monthly QA trend</span>
+            <span class="right">Org-wide average</span>
+          </div>
+          <div style="position:relative; height:220px;">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+
+        <div class="tile-grid">
+          <a href="appointments.html" class="tile">
+            <div class="kpi-icon blue"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3B5BDB" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+            <div><div class="tile-label">Appointments</div><div class="tile-value" id="apptTileValue">View schedule</div></div>
+          </a>
+          <a href="#auditHistory" class="tile">
+            <div class="kpi-icon purple"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7C4DFF" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+            <div><div class="tile-label">Audit log</div><div class="tile-value" id="auditsTileValue">&hellip;</div></div>
+          </a>
+          <a href="users.html" class="tile" id="usersTile" style="display:none;">
+            <div class="kpi-icon green"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6"/><circle cx="18" cy="8.5" r="2.5"/><path d="M16 14.2c2.6.4 4.5 2.4 4.5 5.3"/></svg></div>
+            <div><div class="tile-label">User management</div><div class="tile-value">Manage logins</div></div>
+          </a>
+        </div>
+
+        <h2 id="auditHistory" style="font-size:15px; margin: 24px 0 4px;">Audit history</h2>
+        <div id="controls" class="form-box" style="display:none;"></div>
+
+        <div id="details">Loading...</div>
+        <div class="pagination">
+          <button class="secondary" onclick="prevPage()">&larr; Previous</button>
+          <button class="secondary" onclick="nextPage()">Next &rarr;</button>
+          <span id="pageInfo"></span>
+          <span style="flex:1;"></span>
+          <label class="muted" style="font-size:12px;">Per page:
+            <select id="pageSizeSelect" onchange="changePageSize()" style="width:auto; display:inline-block; margin-bottom:0; margin-left:4px;">
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </label>
+        </div>
+
+        <div id="adminTool" class="form-box" style="display:none; margin-top:24px;">
+          <div class="panel-head" style="margin-bottom:8px;">Admin: send a new password</div>
+          <div class="inline-fields">
+            <input type="email" id="pwResetEmail" placeholder="user@example.com">
+            <button onclick="sendPasswordReset()" style="white-space:nowrap;">Send new password</button>
+          </div>
+          <div id="pwResetResult" class="msg"></div>
+        </div>
+
+      </div>
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
   <script>
     var EXEC_URL = "https://script.google.com/macros/s/AKfycbyD9esDoJQrcSprufwsEQugkdbUZwSsQ-6eYih1M9b7uVe859yprQD4U6p9g9bj1Kw-/exec";
     var token = sessionStorage.getItem("token");
@@ -94,30 +161,27 @@
     } else {
       jsonp(EXEC_URL + "?action=whoami&token=" + encodeURIComponent(token))
         .then(function(data) {
-          if (data.valid) {
-            currentRole = data.role;
-            document.getElementById("avatarInitials").textContent = initials(data.name);
-            document.getElementById("greetingName").textContent = data.name;
-            document.getElementById("greetingRole").textContent = data.role;
-            var chip = document.getElementById("roleChip");
-            chip.textContent = data.role;
-            chip.style.display = "inline-block";
-
-            loadSummary();
-            renderControls();
-            if (currentRole === "Admin") {
-              document.getElementById("adminTool").style.display = "block";
-              document.getElementById("usersLink").style.display = "inline";
-            }
-          } else {
+          if (!data.valid) {
             sessionStorage.clear();
             window.location.href = "index.html";
+            return;
           }
+          currentRole = data.role;
+          document.getElementById("avatarInitials").textContent = initials(data.name);
+          document.getElementById("greetingName").textContent = data.name;
+          document.getElementById("roleChip").textContent = data.role;
+
+          if (currentRole === "Admin") {
+            document.getElementById("usersLink").style.display = "flex";
+            document.getElementById("usersTile").style.display = "flex";
+            document.getElementById("adminTool").style.display = "block";
+          }
+
+          loadSummary();
+          renderControls();
         });
     }
 
-    // --- KPI rendering: turns the summary response into stat cards
-    //     instead of a raw JSON dump. Shape differs by role. ---
     function scoreClass(score) {
       var n = parseFloat(score);
       if (isNaN(n)) return "";
@@ -126,43 +190,133 @@
       return "bad";
     }
 
-    function kpiCard(label, value, cls, sub) {
+    function kpiCard(iconClass, iconSvg, label, value, sub) {
       return "<div class='kpi-card'>" +
+        "<div class='kpi-icon " + iconClass + "'>" + iconSvg + "</div>" +
+        "<div class='kpi-body'>" +
         "<div class='kpi-label'>" + label + "</div>" +
-        "<div class='kpi-value" + (cls ? " " + cls : "") + "'>" + value + "</div>" +
+        "<div class='kpi-value'>" + value + "</div>" +
         (sub ? "<div class='kpi-sub'>" + sub + "</div>" : "") +
+        "</div></div>";
+    }
+
+    function highlightCard(label, value, sub) {
+      return "<div class='kpi-card highlight'>" +
+        "<div class='kpi-icon white'><svg width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='#fff' stroke-width='2'><path d='M12 2l2.6 6.9L22 10l-5.5 4.8L18 22l-6-3.6L6 22l1.5-7.2L2 10l7.4-1.1L12 2z'/></svg></div>" +
+        "<div class='kpi-body'>" +
+        "<div class='kpi-label'>" + label + "</div>" +
+        "<div class='kpi-value'>" + value + "</div>" +
+        (sub ? "<div class='kpi-sub'>" + sub + "</div>" : "") +
+        "</div></div>";
+    }
+
+    var ICONS = {
+      target: "<svg width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='#3B5BDB' stroke-width='2'><circle cx='12' cy='12' r='9'/><circle cx='12' cy='12' r='4.5'/><circle cx='12' cy='12' r='0.8' fill='#3B5BDB'/></svg>",
+      check: "<svg width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='#16A34A' stroke-width='2'><path d='M20 6L9 17l-5-5'/></svg>",
+      x: "<svg width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='#D97706' stroke-width='2'><path d='M18 6L6 18M6 6l12 12'/></svg>",
+      doc: "<svg width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='#7C4DFF' stroke-width='2'><path d='M4 19.5A2.5 2.5 0 0 1 6.5 17H20'/><path d='M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'/></svg>",
+      team: "<svg width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='#3B5BDB' stroke-width='2'><circle cx='9' cy='8' r='3.2'/><path d='M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6'/><circle cx='18' cy='8.5' r='2.5'/><path d='M16 14.2c2.6.4 4.5 2.4 4.5 5.3'/></svg>"
+    };
+
+    function leaderRow(rank, name, sub, value, cls) {
+      return "<div class='leader-row'>" +
+        "<div class='leader-rank'>" + rank + "</div>" +
+        "<div class='leader-info'><div class='n'>" + name + "</div><div class='s'>" + (sub || "") + "</div></div>" +
+        "<div class='leader-value " + cls + "'>" + value + "</div>" +
         "</div>";
+    }
+
+    var monthOrder = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    function sortMonthYear(a, b) {
+      var pa = a.split(" "), pb = b.split(" ");
+      var ya = parseInt(pa[1], 10), yb = parseInt(pb[1], 10);
+      if (ya !== yb) return ya - yb;
+      return monthOrder.indexOf(pa[0]) - monthOrder.indexOf(pb[0]);
+    }
+
+    function renderTrendChart(monthlyAverage) {
+      var keys = Object.keys(monthlyAverage || {}).sort(sortMonthYear);
+      if (keys.length === 0) return;
+
+      document.getElementById("chartPanel").style.display = "block";
+      var values = keys.map(function(k) { return monthlyAverage[k]; });
+
+      new Chart(document.getElementById("trendChart"), {
+        type: "line",
+        data: {
+          labels: keys,
+          datasets: [{
+            data: values,
+            borderColor: "#3B5BDB",
+            backgroundColor: "rgba(59,91,219,0.08)",
+            fill: true,
+            tension: 0.3,
+            pointRadius: 3,
+            pointBackgroundColor: "#3B5BDB",
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { grid: { color: "#EBECF1" }, ticks: { font: { family: "Inter", size: 11 } } },
+            x: { grid: { display: false }, ticks: { font: { family: "Inter", size: 11 } } }
+          }
+        }
+      });
     }
 
     function loadSummary() {
       jsonp(EXEC_URL + "?action=summary&token=" + encodeURIComponent(token))
         .then(function(data) {
-          var grid = document.getElementById("kpiGrid");
-
           if (data.error) {
-            grid.innerHTML = "<div class='kpi-card'><div class='kpi-label'>Error</div><div class='kpi-value bad' style='font-size:15px;'>" + data.error + "</div></div>";
+            document.getElementById("kpiGrid").innerHTML = "<div class='kpi-card'><div class='kpi-body'><div class='kpi-label'>Error</div><div class='kpi-value' style='color:var(--bad); font-size:14px;'>" + data.error + "</div></div></div>";
             return;
           }
 
+          document.getElementById("syncNote").textContent = "Last synced " + new Date(data.lastSynced).toLocaleString();
+
           if (currentRole === "Admin") {
             var teamCount = Object.keys(data.perTeamAverage || {}).length;
-            grid.innerHTML =
-              kpiCard("Org average", (data.orgAverage != null ? data.orgAverage : "-"), scoreClass(data.orgAverage)) +
-              kpiCard("Pass rate", data.orgPassRate != null ? data.orgPassRate + "%" : "-", "good", "\u2265" + data.passRateThreshold + " counts as Pass") +
-              kpiCard("Fail rate", data.orgFailRate != null ? data.orgFailRate + "%" : "-", "bad") +
-              kpiCard("Total audits", data.totalAudits != null ? data.totalAudits : "-", "accent") +
-              kpiCard("Teams tracked", teamCount, "accent") +
-              kpiCard("Last synced", new Date(data.lastSynced).toLocaleString(), "", "auto-refreshes every 15\u201330 min");
+            document.getElementById("kpiGrid").innerHTML =
+              highlightCard("Org average", data.orgAverage != null ? data.orgAverage : "-", "Overall QA score") +
+              kpiCard("green", ICONS.check, "Pass rate", (data.orgPassRate != null ? data.orgPassRate + "%" : "-"), "\u2265" + data.passRateThreshold + " = Pass") +
+              kpiCard("orange", ICONS.x, "Fail rate", (data.orgFailRate != null ? data.orgFailRate + "%" : "-")) +
+              kpiCard("purple", ICONS.doc, "Total audits", data.totalAudits != null ? data.totalAudits : "-") +
+              kpiCard("blue", ICONS.team, "Teams tracked", teamCount);
 
-            // team breakdown table
-            var teamRows = Object.keys(data.perTeamAverage || {}).map(function(t) {
-              return "<div class='row'><span class='k'>" + t + "</span><span class='v'>" + data.perTeamAverage[t] + "</span></div>";
-            }).join("");
-            if (teamRows) {
-              grid.innerHTML += "";
-              document.getElementById("kpiGrid").insertAdjacentHTML("afterend",
-                "<div class='mini-table' id='teamBreakdown'>" + teamRows + "</div>");
-            }
+            document.getElementById("auditsTileValue").textContent = data.totalAudits + " chats audited";
+
+            // Leaderboards from perCsrAverage
+            var csrEntries = Object.keys(data.perCsrAverage || {})
+              .map(function(name) { return { name: name, score: data.perCsrAverage[name] }; })
+              .filter(function(e) { return e.score != null; });
+
+            var topSorted = csrEntries.slice().sort(function(a,b){ return b.score - a.score; }).slice(0, 5);
+            var bottomSorted = csrEntries.slice().sort(function(a,b){ return a.score - b.score; }).slice(0, 5);
+
+            document.getElementById("topPerformers").innerHTML = topSorted.length
+              ? topSorted.map(function(e, i) { return leaderRow(i+1, e.name, "", e.score + "%", "good"); }).join("")
+              : "<div class='empty-row'>No data yet</div>";
+
+            document.getElementById("needsCoaching").innerHTML = bottomSorted.length
+              ? bottomSorted.map(function(e, i) { return leaderRow(i+1, e.name, "", e.score + "%", "bad"); }).join("")
+              : "<div class='empty-row'>No data yet</div>";
+
+            var teamEntries = Object.keys(data.perTeamAverage || {})
+              .map(function(name) { return { name: name, score: data.perTeamAverage[name] }; })
+              .filter(function(e) { return e.score != null; })
+              .sort(function(a,b){ return b.score - a.score; })
+              .slice(0, 5);
+
+            document.getElementById("teamSnapshot").innerHTML = teamEntries.length
+              ? teamEntries.map(function(e, i) { return leaderRow(i+1, e.name, "Team leader", e.score + "%", scoreClass(e.score) === "bad" ? "bad" : "good"); }).join("")
+              : "<div class='empty-row'>No data yet</div>";
+
+            document.getElementById("leaderboardGrid").style.display = "grid";
+            renderTrendChart(data.monthlyAverage);
 
           } else if (currentRole === "Team Leader" || currentRole === "SME") {
             var quarters = data.quarterlyAverages || {};
@@ -170,32 +324,31 @@
             var latestQ = quarterKeys[quarterKeys.length - 1];
             var latestScore = latestQ ? quarters[latestQ] : null;
 
-            grid.innerHTML =
-              kpiCard("Latest quarter avg", latestScore != null ? latestScore : "-", scoreClass(latestScore), latestQ || "") +
-              kpiCard("Team pass rate", data.teamPassRate != null ? data.teamPassRate + "%" : "-", "good", "\u2265" + data.passRateThreshold + " counts as Pass") +
-              kpiCard("Team fail rate", data.teamFailRate != null ? data.teamFailRate + "%" : "-", "bad") +
-              kpiCard("Org total audits", data.orgTotalAudits != null ? data.orgTotalAudits : "-", "accent") +
-              kpiCard("Quarters tracked", quarterKeys.length, "accent") +
-              kpiCard("Last synced", new Date(data.lastSynced).toLocaleString(), "", "");
+            document.getElementById("kpiGrid").innerHTML =
+              highlightCard("Latest quarter avg", latestScore != null ? latestScore : "-", latestQ || "") +
+              kpiCard("green", ICONS.check, "Team pass rate", (data.teamPassRate != null ? data.teamPassRate + "%" : "-"), "\u2265" + data.passRateThreshold + " = Pass") +
+              kpiCard("orange", ICONS.x, "Team fail rate", (data.teamFailRate != null ? data.teamFailRate + "%" : "-")) +
+              kpiCard("purple", ICONS.doc, "Org total audits", data.orgTotalAudits != null ? data.orgTotalAudits : "-");
 
-            var qRows = quarterKeys.map(function(q) {
-              return "<div class='row'><span class='k'>" + q + "</span><span class='v'>" + quarters[q] + "</span></div>";
-            }).join("");
-            if (qRows) {
-              document.getElementById("kpiGrid").insertAdjacentHTML("afterend",
-                "<div class='mini-table'>" + qRows + "</div>");
-            }
+            document.getElementById("auditsTileValue").textContent = "View your team's records";
+
+            var qRows = quarterKeys.map(function(q) { return leaderRow("", q, "", quarters[q] + "%", scoreClass(quarters[q]) === "bad" ? "bad" : "good"); }).join("");
+            document.getElementById("leaderboardGrid").innerHTML =
+              "<div class='panel'><div class='panel-head'><span class='dot accent'></span> Quarterly performance</div>" +
+              (qRows || "<div class='empty-row'>No data yet</div>") + "</div>";
+            document.getElementById("leaderboardGrid").style.display = "grid";
 
           } else if (currentRole === "CSR") {
-            grid.innerHTML =
-              kpiCard("My average score", data.myAverage != null ? data.myAverage : "No data yet", scoreClass(data.myAverage)) +
-              kpiCard("My pass rate", data.myPassRate != null ? data.myPassRate + "%" : "-", "good", data.myPassRate != null ? "\u2265" + data.passRateThreshold + " counts as Pass" : "") +
-              kpiCard("My fail rate", data.myFailRate != null ? data.myFailRate + "%" : "-", "bad") +
-              kpiCard("Last synced", new Date(data.lastSynced).toLocaleString(), "", "");
+            document.getElementById("kpiGrid").innerHTML =
+              highlightCard("My average score", data.myAverage != null ? data.myAverage : "No data yet", "") +
+              kpiCard("green", ICONS.check, "My pass rate", (data.myPassRate != null ? data.myPassRate + "%" : "-"), data.myPassRate != null ? "\u2265" + data.passRateThreshold + " = Pass" : "") +
+              kpiCard("orange", ICONS.x, "My fail rate", (data.myFailRate != null ? data.myFailRate + "%" : "-"));
+
+            document.getElementById("auditsTileValue").textContent = "View my history";
           }
         })
         .catch(function(err) {
-          document.getElementById("kpiGrid").innerHTML = "<div class='kpi-card'><div class='kpi-label'>Error</div><div class='kpi-value bad' style='font-size:15px;'>Failed to load</div></div>";
+          document.getElementById("kpiGrid").innerHTML = "<div class='kpi-card'><div class='kpi-body'><div class='kpi-label'>Error</div><div class='kpi-value' style='color:var(--bad); font-size:14px;'>Failed to load</div></div></div>";
           console.error(err);
         });
     }
@@ -317,7 +470,7 @@
       jsonp(url)
         .then(function(data) {
           if (data.error) {
-            detailsEl.innerHTML = "<div class='empty-state error'>" + data.error + "</div>";
+            detailsEl.innerHTML = "<div class='empty-state' style='color:var(--bad);'>" + data.error + "</div>";
             document.getElementById("pageInfo").textContent = "";
             return;
           }
@@ -327,13 +480,11 @@
             var html = data.records.map(function(r) {
               return "<div class='card'>" +
                 "<div class='card-row'>" +
-                "<div style='display:flex; align-items:center; gap:12px;'>" +
-                "<div class='score-ring " + (scoreClass(r["Ave Score"]) || "neutral") + "'>" + (r["Ave Score"] || "-") + "</div>" +
                 "<div><div class='title'>" + (r["CSR Name"] || "") + "</div>" +
                 "<div class='meta'>" + (r["Chat Date"] || "") + " &middot; " + (r["Main Category"] || "") + " / " + (r["Sub Category"] || "") + "</div></div>" +
+                "<div class='score-ring " + (scoreClass(r["Ave Score"]) || "neutral") + "'>" + (r["Ave Score"] || "-") + "</div>" +
                 "</div>" +
-                "</div>" +
-                (r["Successes"] ? "<div><strong>Successes:</strong> " + r["Successes"] + "</div>" : "") +
+                (r["Successes"] ? "<div style='margin-top:6px;'><strong>Successes:</strong> " + r["Successes"] + "</div>" : "") +
                 (r["Opportunities"] ? "<div><strong>Opportunities:</strong> " + r["Opportunities"] + "</div>" : "") +
                 (r["Recommendations"] ? "<div><strong>Recommendations:</strong> " + r["Recommendations"] + "</div>" : "") +
                 "</div>";
@@ -343,26 +494,25 @@
           document.getElementById("pageInfo").textContent = "Page " + data.page + " of " + data.totalPages + " (" + data.totalRecords + " total)";
         })
         .catch(function(err) {
-          detailsEl.innerHTML = "<div class='empty-state error'>Error loading details.</div>";
+          detailsEl.innerHTML = "<div class='empty-state' style='color:var(--bad);'>Error loading details.</div>";
           console.error(err);
         });
     }
 
     function nextPage() { currentPage++; loadDetails(); }
     function prevPage() { if (currentPage > 1) { currentPage--; loadDetails(); } }
-
     function changePageSize() {
       currentPageSize = parseInt(document.getElementById("pageSizeSelect").value, 10);
       currentPage = 1;
       loadDetails();
     }
 
-    function sendPin() {
-      var email = document.getElementById("pinResetEmail").value.trim();
-      var resultEl = document.getElementById("pinResetResult");
+    function sendPasswordReset() {
+      var email = document.getElementById("pwResetEmail").value.trim();
+      var resultEl = document.getElementById("pwResetResult");
       resultEl.textContent = "Sending...";
 
-      jsonp(EXEC_URL + "?action=resetPin&token=" + encodeURIComponent(token) + "&email=" + encodeURIComponent(email))
+      jsonp(EXEC_URL + "?action=resetPassword&token=" + encodeURIComponent(token) + "&email=" + encodeURIComponent(email))
         .then(function(data) {
           resultEl.textContent = data.success ? data.message : (data.error || "Something went wrong.");
         });
