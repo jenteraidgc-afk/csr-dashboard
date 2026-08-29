@@ -5,47 +5,78 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="appbar">
-    <div class="brand">CSR Dashboard</div>
-    <div class="nav-links">
-      <a href="dashboard.html">Overview</a>
-      <a href="appointments.html" class="active">Appointments</a>
-      <a href="users.html" id="usersLink" style="display:none;">Users</a>
-    </div>
-    <button class="logout-btn" onclick="logout()">Log out</button>
-  </div>
-
-  <div class="page">
-    <h1>Appointments</h1>
-
-    <div class="form-box">
-      <h3 style="margin-top:0;">New appointment</h3>
-      <div class="inline-fields">
-        <input type="date" id="newDate">
-        <input type="time" id="newTime">
+  <div class="app-shell">
+    <div class="sidebar">
+      <div class="sidebar-brand">
+        <div class="mark">CS</div>
+        <div class="label"><div class="t">Audit CRM</div><div class="s">Quality Assurance</div></div>
       </div>
-      <input type="text" id="newTitle" placeholder="Title">
-      <textarea id="newDescription" placeholder="Description (optional)" rows="2"></textarea>
-      <input type="text" id="newAssignedTo" placeholder="Assigned to (name)" style="display:none;">
-      <input type="text" id="newTeam" placeholder="Team" style="display:none;">
-      <button onclick="submitCreate()">Create appointment</button>
-      <div id="createError" class="error"></div>
+      <div class="sidebar-nav">
+        <a href="dashboard.html">
+          <span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>
+          Overview
+        </a>
+        <a href="appointments.html" class="active">
+          <span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>
+          Appointments
+        </a>
+        <a href="users.html" id="usersLink" style="display:none;">
+          <span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6"/><circle cx="18" cy="8.5" r="2.5"/><path d="M16 14.2c2.6.4 4.5 2.4 4.5 5.3"/></svg></span>
+          Users
+        </a>
+      </div>
+      <div class="sidebar-footer">
+        <div class="user-row">
+          <div class="avatar" id="avatarInitials">--</div>
+          <div style="min-width:0;">
+            <div class="name" id="greetingName">&nbsp;</div>
+            <span class="role-badge" id="roleChip"></span>
+          </div>
+        </div>
+        <button class="logout-btn" onclick="logout()">Log out</button>
+      </div>
     </div>
 
-    <h3 class="section-label">Upcoming &amp; recent</h3>
-    <div id="list">Loading...</div>
-    <div class="pagination">
-      <button class="secondary" onclick="prevPage()">&larr; Previous</button>
-      <button class="secondary" onclick="nextPage()">Next &rarr;</button>
-      <span id="pageInfo"></span>
-      <span style="flex:1;"></span>
-      <label class="muted" style="font-size:12.5px;">Per page:
-        <select id="pageSizeSelect" onchange="changePageSize()" style="width:auto; display:inline-block; margin-bottom:0; margin-left:4px;">
-          <option value="25">25</option>
-          <option value="50">50</option>
-          <option value="100">100</option>
-        </select>
-      </label>
+    <div class="content">
+      <div class="topbar">
+        <div>
+          <h1>Appointments</h1>
+          <div class="subtitle">Schedule, reschedule, and track coaching sessions</div>
+        </div>
+      </div>
+
+      <div class="page-body">
+
+        <div class="form-box">
+          <div class="panel-head">New appointment</div>
+          <div class="inline-fields">
+            <input type="date" id="newDate">
+            <input type="time" id="newTime">
+          </div>
+          <input type="text" id="newTitle" placeholder="Title">
+          <textarea id="newDescription" placeholder="Description (optional)" rows="2"></textarea>
+          <input type="text" id="newAssignedTo" placeholder="Assigned to (name)" style="display:none;">
+          <input type="text" id="newTeam" placeholder="Team" style="display:none;">
+          <button onclick="submitCreate()">Create appointment</button>
+          <div id="createError" class="error"></div>
+        </div>
+
+        <div id="list">Loading...</div>
+        <div class="pagination">
+          <button class="secondary" onclick="prevPage()">&larr; Previous</button>
+          <button class="secondary" onclick="nextPage()">Next &rarr;</button>
+          <span id="pageInfo"></span>
+          <span style="flex:1;"></span>
+          <label class="muted" style="font-size:12px;">Per page:
+            <select id="pageSizeSelect" onchange="changePageSize()" style="width:auto; display:inline-block; margin-bottom:0; margin-left:4px;">
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </label>
+        </div>
+
+      </div>
     </div>
   </div>
 
@@ -74,6 +105,12 @@
       });
     }
 
+    function initials(name) {
+      if (!name) return "?";
+      var parts = name.split(",")[0].trim().split(" ");
+      return (parts[0][0] || "").toUpperCase();
+    }
+
     if (!token) {
       window.location.href = "index.html";
     } else {
@@ -85,12 +122,16 @@
             return;
           }
           currentRole = data.role;
+          document.getElementById("avatarInitials").textContent = initials(data.name);
+          document.getElementById("greetingName").textContent = data.name;
+          document.getElementById("roleChip").textContent = data.role;
+
           if (currentRole === "Admin" || currentRole === "Team Leader" || currentRole === "SME") {
             document.getElementById("newAssignedTo").style.display = "block";
           }
           if (currentRole === "Admin") {
             document.getElementById("newTeam").style.display = "block";
-            document.getElementById("usersLink").style.display = "inline";
+            document.getElementById("usersLink").style.display = "flex";
           }
           loadList();
         });
@@ -139,7 +180,7 @@
       jsonp(EXEC_URL + "?action=listAppointments&token=" + encodeURIComponent(token) + "&page=" + currentPage + "&pageSize=" + currentPageSize)
         .then(function(data) {
           if (data.error) {
-            listEl.innerHTML = "<div class='empty-state error'>" + data.error + "</div>";
+            listEl.innerHTML = "<div class='empty-state' style='color:var(--bad);'>" + data.error + "</div>";
             document.getElementById("pageInfo").textContent = "";
             return;
           }
@@ -154,8 +195,8 @@
                 "<span class='status-tag " + a["Status"] + "'>" + a["Status"] + "</span>" +
                 "</div>" +
                 "<div class='meta'>" + a["Date"] + " " + a["Time"] + " &middot; Assigned to: " + (a["Assigned To"] || "-") + " &middot; Team: " + (a["Team"] || "-") + "</div>" +
-                (a["Description"] ? "<div>" + a["Description"] + "</div>" : "") +
-                "<div class='meta'>Created by " + a["Created By"] + "</div>" +
+                (a["Description"] ? "<div style='margin-top:4px;'>" + a["Description"] + "</div>" : "") +
+                "<div class='meta' style='margin-top:4px;'>Created by " + a["Created By"] + "</div>" +
                 "<div class='btn-row'>" +
                 "<button class='secondary' onclick=\"changeStatus('" + a["Appointment ID"] + "','Completed')\">Complete</button>" +
                 "<button class='secondary' onclick=\"changeStatus('" + a["Appointment ID"] + "','Cancelled')\">Cancel</button>" +
@@ -226,7 +267,6 @@
 
     function nextPage() { currentPage++; loadList(); }
     function prevPage() { if (currentPage > 1) { currentPage--; loadList(); } }
-
     function changePageSize() {
       currentPageSize = parseInt(document.getElementById("pageSizeSelect").value, 10);
       currentPage = 1;
