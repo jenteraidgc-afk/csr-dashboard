@@ -5,37 +5,67 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="appbar">
-    <div class="brand">CSR Dashboard</div>
-    <div class="nav-links">
-      <a href="dashboard.html">Overview</a>
-      <a href="appointments.html">Appointments</a>
-      <a href="users.html" class="active">Users</a>
+  <div class="app-shell">
+    <div class="sidebar">
+      <div class="sidebar-brand">
+        <div class="mark">CS</div>
+        <div class="label"><div class="t">Audit CRM</div><div class="s">Quality Assurance</div></div>
+      </div>
+      <div class="sidebar-nav">
+        <a href="dashboard.html">
+          <span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>
+          Overview
+        </a>
+        <a href="appointments.html">
+          <span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>
+          Appointments
+        </a>
+        <a href="users.html" class="active">
+          <span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6"/><circle cx="18" cy="8.5" r="2.5"/><path d="M16 14.2c2.6.4 4.5 2.4 4.5 5.3"/></svg></span>
+          Users
+        </a>
+      </div>
+      <div class="sidebar-footer">
+        <div class="user-row">
+          <div class="avatar" id="avatarInitials">--</div>
+          <div style="min-width:0;">
+            <div class="name" id="greetingName">&nbsp;</div>
+            <span class="role-badge" id="roleChip"></span>
+          </div>
+        </div>
+        <button class="logout-btn" onclick="logout()">Log out</button>
+      </div>
     </div>
-    <button class="logout-btn" onclick="logout()">Log out</button>
-  </div>
 
-  <div class="page">
-    <h1>User management</h1>
-    <p id="accessDenied" class="error" style="display:none;">Admin access required.</p>
-
-    <div id="content" style="display:none;">
-      <div class="form-box">
-        <h3 style="margin-top:0;">Add user</h3>
-        <input type="text" id="newName" placeholder="Full name">
-        <input type="email" id="newEmail" placeholder="Email">
-        <select id="newRole">
-          <option value="Admin">Admin</option>
-          <option value="Team Leader">Team Leader</option>
-          <option value="SME">SME</option>
-          <option value="CSR" selected>CSR</option>
-        </select>
-        <button onclick="submitCreate()">Add &amp; email PIN</button>
-        <div id="createMsg"></div>
+    <div class="content">
+      <div class="topbar">
+        <div>
+          <h1>User management</h1>
+          <div class="subtitle">Add, deactivate, and reassign roles</div>
+        </div>
       </div>
 
-      <h3 class="section-label">All users</h3>
-      <div id="userList">Loading...</div>
+      <div class="page-body">
+        <p id="accessDenied" class="error" style="display:none;">Admin access required.</p>
+
+        <div id="content" style="display:none;">
+          <div class="form-box">
+            <div class="panel-head">Add user</div>
+            <input type="text" id="newName" placeholder="Full name">
+            <input type="email" id="newEmail" placeholder="Email">
+            <select id="newRole">
+              <option value="Admin">Admin</option>
+              <option value="Team Leader">Team Leader</option>
+              <option value="SME">SME</option>
+              <option value="CSR" selected>CSR</option>
+            </select>
+            <button onclick="submitCreate()">Add &amp; email password</button>
+            <div id="createMsg"></div>
+          </div>
+
+          <div id="userList">Loading...</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -61,6 +91,12 @@
       });
     }
 
+    function initials(name) {
+      if (!name) return "?";
+      var parts = name.split(",")[0].trim().split(" ");
+      return (parts[0][0] || "").toUpperCase();
+    }
+
     if (!token) {
       window.location.href = "index.html";
     } else {
@@ -71,6 +107,10 @@
             window.location.href = "index.html";
             return;
           }
+          document.getElementById("avatarInitials").textContent = initials(data.name);
+          document.getElementById("greetingName").textContent = data.name;
+          document.getElementById("roleChip").textContent = data.role;
+
           if (data.role !== "Admin") {
             document.getElementById("accessDenied").style.display = "block";
             return;
@@ -121,7 +161,7 @@
       jsonp(EXEC_URL + "?action=listUsers&token=" + encodeURIComponent(token))
         .then(function(data) {
           if (data.error) {
-            listEl.innerHTML = "<div class='empty-state error'>" + data.error + "</div>";
+            listEl.innerHTML = "<div class='empty-state' style='color:var(--bad);'>" + data.error + "</div>";
             return;
           }
           if (!data.users || data.users.length === 0) {
@@ -132,8 +172,8 @@
             var safeEmail = u.email.replace(/'/g, "\\'");
             return "<div class='card'>" +
               "<div class='card-row'>" +
-                "<div style='display:flex; align-items:center; gap:12px;'>" +
-                  "<div class='avatar-ring' style='width:36px; height:36px; font-size:14px;'>" + (u.name ? u.name.charAt(0).toUpperCase() : "?") + "</div>" +
+                "<div style='display:flex; align-items:center; gap:11px;'>" +
+                  "<div class='avatar' style='width:32px; height:32px; font-size:12.5px; background:var(--accent-quiet); color:var(--accent);'>" + (u.name ? u.name.charAt(0).toUpperCase() : "?") + "</div>" +
                   "<div>" +
                     "<div class='title'>" + u.name + " <span class='status-tag " + u.status + "'>" + u.status + "</span></div>" +
                     "<div class='meta'>" + u.email + " &middot; " + u.role + "</div>" +
