@@ -6,15 +6,16 @@
 </head>
 <body>
   <div class="center-screen">
-    <div class="page narrow">
-      <div style="text-align:center; margin-bottom:24px;">
+    <div class="login-box">
+      <div style="text-align:center; margin-bottom:20px;">
+        <div style="width:40px; height:40px; border-radius:11px; background:linear-gradient(135deg,var(--accent),var(--purple)); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:15px; margin:0 auto 12px;">CS</div>
         <h1>CSR Dashboard</h1>
-        <p class="muted" style="margin-top:6px;">Sign in with your email and PIN</p>
+        <p class="muted" style="margin-top:6px; font-size:12.5px;">Sign in with your email and password</p>
       </div>
 
-      <div class="panel">
+      <div class="login-panel">
         <input type="email" id="email" placeholder="Email">
-        <input type="text" id="pin" placeholder="6-digit PIN" maxlength="6">
+        <input type="password" id="password" placeholder="Password">
         <button onclick="login()" style="width:100%;">Sign in</button>
         <div id="error" class="error"></div>
       </div>
@@ -44,11 +45,11 @@
 
     function login() {
       var email = document.getElementById("email").value.trim();
-      var pin = document.getElementById("pin").value.trim();
+      var password = document.getElementById("password").value.trim();
       var errorEl = document.getElementById("error");
       errorEl.textContent = "";
 
-      var url = EXEC_URL + "?action=login&email=" + encodeURIComponent(email) + "&pin=" + encodeURIComponent(pin);
+      var url = EXEC_URL + "?action=login&email=" + encodeURIComponent(email) + "&password=" + encodeURIComponent(password);
 
       jsonp(url)
         .then(function(data) {
@@ -66,6 +67,10 @@
           console.error(err);
         });
     }
+
+    document.getElementById("password").addEventListener("keydown", function(e) {
+      if (e.key === "Enter") login();
+    });
   </script>
 </body>
 </html>
