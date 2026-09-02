@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>KPI Report</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .kpi-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .kpi-table th { text-align: left; font-size: 10.5px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.04em; padding: 10px 12px; background: var(--bg); border-bottom: 1px solid var(--border); }
+    .kpi-table td { padding: 10px 12px; font-size: 12.5px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .kpi-table tr:last-child td { border-bottom: none; }
+    .kpi-table tr.clickable { cursor: pointer; }
+    .kpi-table tr.clickable:hover { background: var(--bg); }
+    .final-kpi { font-family: var(--font-mono); font-weight: 700; font-size: 13.5px; }
+    .final-kpi.good { color: var(--good); }
+    .final-kpi.warn { color: var(--warn); }
+    .final-kpi.bad { color: var(--bad); }
+    .missing-tag { font-size: 10.5px; color: var(--bad); background: var(--bad-quiet); padding: 1px 7px; border-radius: 10px; }
+    .drill-row td { background: var(--bg); padding: 14px 18px; }
+    .chat-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+    .chat-row:last-child { border-bottom: none; }
+    .chat-id { font-family: var(--font-mono); }
+    .markdown-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px; }
+    .markdown-tags span { font-size: 10px; background: var(--warn-quiet); color: var(--warn); padding: 1px 6px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="sidebar">
+      <div class="sidebar-brand">
+        <div class="mark">CS</div>
+        <div class="label"><div class="t">Audit CRM</div><div class="s">Quality Assurance</div></div>
+      </div>
+      <div class="sidebar-nav">
+        <a href="dashboard.html">
+          <span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>
+          Overview
+        </a>
+        <a href="kpi.html" class="active">
+          <span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16M4 19V9M10 19V5M16 19v-7"/></svg></span>
+          KPI Report
+        </a>
+        <a href="appointments.html">
+          <span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>
+          Appointments
+        </a>
+        <a href="users.html" id="usersLink" style="display:none;">
+          <span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6"/><circle cx="18" cy="8.5" r="2.5"/><path d="M16 14.2c2.6.4 4.5 2.4 4.5 5.3"/></svg></span>
+          Users
+        </a>
+      </div>
+      <div class="sidebar-footer">
+        <div class="user-row">
+          <div class="avatar" id="avatarInitials">--</div>
+          <div style="min-width:0;">
+            <div class="name" id="greetingName">&nbsp;</div>
+            <span class="role-badge" id="roleChip"></span>
+          </div>
+        </div>
+        <button class="logout-btn" onclick="logout()">Log out</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="topbar">
+        <div>
+          <h1>KPI Report</h1>
+          <div class="subtitle">QA 40% &middot; Assessment 10% &middot; AHT 25% &middot; Attendance 25%</div>
+        </div>
+      </div>
+
+      <div class="page-body">
+
+        <div class="form-box">
+          <div class="inline-fields autocomplete-wrap" style="align-items:flex-end;">
+            <div style="flex:1;">
+              <div class="field-label">Month</div>
+              <input type="text" id="monthInput" placeholder="e.g. Sep 2026">
+            </div>
+            <div style="flex:1; display:none;" id="csrFilterWrap">
+              <div class="field-label">CSR (optional, Admin only)</div>
+              <input type="text" id="csrFilterInput" placeholder="start typing a name..." autocomplete="off">
+              <div id="csrSuggestions" class="suggestions"></div>
+            </div>
+            <button onclick="loadKpi()" style="white-space:nowrap;">Load report</button>
+          </div>
+          <div id="kpiError" class="error"></div>
+        </div>
+
+        <div id="kpiResults"></div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var EXEC_URL = "https://script.google.com/macros/s/AKfycbyD9esDoJQrcSprufwsEQugkdbUZwSsQ-6eYih1M9b7uVe859yprQD4U6p9g9bj1Kw-/exec";
+    var token = sessionStorage.getItem("token");
+    var currentRole = null;
+    var currentRecords = [];
+
+    function jsonp(url) {
+      return new Promise(function(resolve, reject) {
+        var callbackName = "cb_" + Math.round(Math.random() * 1000000);
+        window[callbackName] = function(data) {
+          resolve(data);
+          delete window[callbackName];
+          document.body.removeChild(script);
+        };
+        var script = document.createElement("script");
+        script.src = url + (url.indexOf("?") >= 0 ? "&" : "?") + "callback=" + callbackName;
+        script.onerror = function() {
+          reject(new Error("Request failed"));
+          delete window[callbackName];
+        };
+        document.body.appendChild(script);
+      });
+    }
+
+    function initials(name) {
+      if (!name) return "?";
+      var parts = name.split(",")[0].trim().split(" ");
+      return (parts[0][0] || "").toUpperCase();
+    }
+
+    if (!token) {
+      window.location.href = "index.html";
+    } else {
+      jsonp(EXEC_URL + "?action=whoami&token=" + encodeURIComponent(token))
+        .then(function(data) {
+          if (!data.valid) {
+            sessionStorage.clear();
+            window.location.href = "index.html";
+            return;
+          }
+          currentRole = data.role;
+          document.getElementById("avatarInitials").textContent = initials(data.name);
+          document.getElementById("greetingName").textContent = data.name;
+          document.getElementById("roleChip").textContent = data.role;
+
+          if (currentRole === "Admin") {
+            document.getElementById("usersLink").style.display = "flex";
+            document.getElementById("csrFilterWrap").style.display = "block";
+            wireAutocomplete("csrFilterInput", "csrSuggestions", "searchCsr");
+          }
+
+          // default to current month, e.g. "Sep 2026"
+          var monthAbbr = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+          var now = new Date();
+          document.getElementById("monthInput").value = monthAbbr[now.getMonth()] + " " + now.getFullYear();
+        });
+    }
+
+    function wireAutocomplete(inputId, suggestionsId, action) {
+      var input = document.getElementById(inputId);
+      var box = document.getElementById(suggestionsId);
+      var debounceTimer = null;
+
+      input.addEventListener("input", function() {
+        clearTimeout(debounceTimer);
+        var query = input.value.trim();
+        if (!query) { box.style.display = "none"; return; }
+
+        debounceTimer = setTimeout(function() {
+          jsonp(EXEC_URL + "?action=" + action + "&token=" + encodeURIComponent(token) + "&q=" + encodeURIComponent(query))
+            .then(function(data) {
+              if (!data.matches || data.matches.length === 0) { box.style.display = "none"; return; }
+              box.innerHTML = data.matches.map(function(name) {
+                return "<div onmousedown=\"document.getElementById('" + inputId + "').value='" + name.replace(/'/g, "\\'") + "'; document.getElementById('" + suggestionsId + "').style.display='none';\">" + name + "</div>";
+              }).join("");
+              box.style.display = "block";
+            });
+        }, 400);
+      });
+
+      input.addEventListener("blur", function() {
+        setTimeout(function() { box.style.display = "none"; }, 150);
+      });
+    }
+
+    function finalKpiClass(v) {
+      if (v == null) return "";
+      if (v >= 85) return "good";
+      if (v >= 70) return "warn";
+      return "bad";
+    }
+
+    function fmtAht(seconds) {
+      if (seconds == null) return "-";
+      var m = Math.floor(seconds / 60);
+      var s = Math.round(seconds % 60);
+      return m + ":" + (s < 10 ? "0" : "") + s;
+    }
+
+    function loadKpi() {
+      var month = document.getElementById("monthInput").value.trim();
+      var errorEl = document.getElementById("kpiError");
+      errorEl.textContent = "";
+
+      if (!month) { errorEl.textContent = "Month is required."; return; }
+
+      var url = EXEC_URL + "?action=kpi&token=" + encodeURIComponent(token) + "&month=" + encodeURIComponent(month);
+      if (currentRole === "Admin") {
+        var csr = document.getElementById("csrFilterInput").value.trim();
+        if (csr) url += "&csr=" + encodeURIComponent(csr);
+      }
+
+      document.getElementById("kpiResults").innerHTML = "<div class='empty-state'>Loading&hellip;</div>";
+
+      jsonp(url).then(function(data) {
+        if (data.error) {
+          document.getElementById("kpiResults").innerHTML = "";
+          errorEl.textContent = data.error;
+          return;
+        }
+        currentRecords = data.records || [];
+        renderResults();
+      });
+    }
+
+    function renderResults() {
+      var el = document.getElementById("kpiResults");
+      if (currentRecords.length === 0) {
+        el.innerHTML = "<div class='empty-state'>No records for this month.</div>";
+        return;
+      }
+
+      var rows = currentRecords.map(function(rec, idx) {
+        var missingTags = rec.missingComponents
+          ? rec.missingComponents.map(function(m) { return "<span class='missing-tag'>" + m + " missing</span>"; }).join(" ")
+          : "";
+
+        return "<tr class='clickable' onclick=\"toggleDrilldown(" + idx + ")\">" +
+          "<td><strong>" + rec.csr + "</strong><div class='meta'>" + (rec.teamLeader || "") + "</div></td>" +
+          "<td>" + (rec.qaAuditScore != null ? rec.qaAuditScore.toFixed(2) + "%" : "-") + "<div class='meta'>" + (rec.qaContribution != null ? rec.qaContribution.toFixed(2) + " / 40" : "") + "</div></td>" +
+          "<td>" + (rec.assessmentScore != null ? rec.assessmentScore : "-") + "<div class='meta'>" + (rec.assessmentPoints != null ? rec.assessmentPoints + " / 10" : "") + "</div></td>" +
+          "<td>" + fmtAht(rec.aht) + "<div class='meta'>" + (rec.ahtPoints != null ? rec.ahtPoints + " / 25" : "") + "</div></td>" +
+          "<td>" + (rec.attendancePoints != null ? rec.attendancePoints : "-") + "<div class='meta'>" + (rec.attendanceKpiPoints != null ? rec.attendanceKpiPoints + " / 25" : "") + "</div></td>" +
+          "<td><span class='final-kpi " + finalKpiClass(rec.finalKpi) + "'>" + (rec.finalKpi != null ? rec.finalKpi : "-") + "</span>" +
+          (missingTags ? "<div style='margin-top:4px;'>" + missingTags + "</div>" : "") + "</td>" +
+          "</tr>" +
+          "<tr class='drill-row' id='drill-" + idx + "' style='display:none;'>" +
+          "<td colspan='6'><div id='drillContent-" + idx + "'>Loading&hellip;</div></td>" +
+          "</tr>";
+      }).join("");
+
+      el.innerHTML =
+        "<table class='kpi-table'>" +
+        "<tr><th>CSR</th><th>QA Audit</th><th>Assessment</th><th>AHT</th><th>Attendance</th><th>Final KPI</th></tr>" +
+        rows +
+        "</table>";
+    }
+
+    var drillLoaded = {};
+    function toggleDrilldown(idx) {
+      var row = document.getElementById("drill-" + idx);
+      var isOpen = row.style.display !== "none";
+      row.style.display = isOpen ? "none" : "table-row";
+      if (!isOpen && !drillLoaded[idx]) {
+        drillLoaded[idx] = true;
+        var rec = currentRecords[idx];
+        var url = EXEC_URL + "?action=qaDrilldown&token=" + encodeURIComponent(token) +
+                  "&csr=" + encodeURIComponent(rec.csr) + "&month=" + encodeURIComponent(rec.month);
+        jsonp(url).then(function(data) {
+          var contentEl = document.getElementById("drillContent-" + idx);
+          if (data.error) { contentEl.innerHTML = "<span class='error'>" + data.error + "</span>"; return; }
+          if (!data.records || data.records.length === 0) { contentEl.innerHTML = "No audited chats found for this month."; return; }
+          contentEl.innerHTML = data.records.map(function(r) {
+            return "<div class='chat-row'>" +
+              "<div><span class='chat-id'>" + r.chatId + "</span> &middot; " + r.chatDate + "</div>" +
+              "<div style='text-align:right;'>" + r.score + "%" +
+              (r.markdownCount > 0 ? "<div class='markdown-tags'>" + r.markdownCriteria.map(function(m) { return "<span>" + m + "</span>"; }).join("") + "</div>" : "") +
+              "</div></div>";
+          }).join("");
+        });
+      }
+    }
+
+    function logout() {
+      sessionStorage.clear();
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>
