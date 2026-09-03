@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Roster</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .roster-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+    .roster-avg { font-family: var(--font-mono); font-size: 13px; color: var(--text-muted); }
+    .member-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); }
+    .member-row:last-child { border-bottom: none; }
+    .member-score { font-family: var(--font-mono); font-weight: 700; font-size: 13px; }
+    .member-score.good { color: var(--good); }
+    .member-score.warn { color: var(--warn); }
+    .member-score.bad { color: var(--bad); }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="sidebar">
+      <div class="sidebar-brand">
+        <div class="mark">CS</div>
+        <div class="label"><div class="t">Audit CRM</div><div class="s">Quality Assurance</div></div>
+      </div>
+      <div class="sidebar-nav">
+        <a href="dashboard.html">
+          <span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>
+          Overview
+        </a>
+        <a href="kpi.html">
+          <span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16M4 19V9M10 19V5M16 19v-7"/></svg></span>
+          KPI Report
+        </a>
+        <a href="roster.html" class="active">
+          <span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6"/><path d="M15.5 3.5a3.2 3.2 0 0 1 0 6"/><path d="M16 14.2c2.6.4 4.5 2.4 4.5 5.3"/></svg></span>
+          Roster
+        </a>
+        <a href="appointments.html">
+          <span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>
+          Appointments
+        </a>
+        <a href="users.html" id="usersLink" style="display:none;">
+          <span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6"/><circle cx="18" cy="8.5" r="2.5"/><path d="M16 14.2c2.6.4 4.5 2.4 4.5 5.3"/></svg></span>
+          Users
+        </a>
+      </div>
+      <div class="sidebar-footer">
+        <div class="user-row">
+          <div class="avatar" id="avatarInitials">--</div>
+          <div style="min-width:0;">
+            <div class="name" id="greetingName">&nbsp;</div>
+            <span class="role-badge" id="roleChip"></span>
+          </div>
+        </div>
+        <button class="logout-btn" onclick="logout()">Log out</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="topbar">
+        <div>
+          <h1>Roster</h1>
+          <div class="subtitle">Team membership by quarter, with each member's quarter average</div>
+        </div>
+      </div>
+
+      <div class="page-body">
+
+        <div class="form-box">
+          <div class="inline-fields autocomplete-wrap" style="align-items:flex-end;" id="lookupFields">
+            <div style="flex:1; display:none;" id="teamFieldWrap">
+              <div class="field-label">Team leader</div>
+              <input type="text" id="teamInput" placeholder="start typing a team..." autocomplete="off">
+              <div id="teamSuggestions" class="suggestions"></div>
+            </div>
+            <div style="flex:1;">
+              <div class="field-label">Quarter</div>
+              <input type="text" id="quarterInput" placeholder="e.g. Q3 2026">
+            </div>
+            <button onclick="loadRoster()" style="white-space:nowrap;">Load roster</button>
+          </div>
+          <div id="lookupError" class="error"></div>
+        </div>
+
+        <div id="rosterView"></div>
+
+        <div class="form-box" id="addMemberBox" style="display:none; margin-top:16px;">
+          <div class="panel-head">Add CSR to this roster</div>
+          <div class="inline-fields autocomplete-wrap">
+            <input type="text" id="addCsrInput" placeholder="start typing a CSR name..." autocomplete="off">
+            <div id="addCsrSuggestions" class="suggestions"></div>
+            <button onclick="addMember()" style="white-space:nowrap;">Add</button>
+          </div>
+          <div id="addMemberMsg"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var EXEC_URL = "https://script.google.com/macros/s/AKfycbyD9esDoJQrcSprufwsEQugkdbUZwSsQ-6eYih1M9b7uVe859yprQD4U6p9g9bj1Kw-/exec";
+    var token = sessionStorage.getItem("token");
+    var currentRole = null;
+    var currentTeam = null;
+    var currentQuarter = null;
+
+    function jsonp(url) {
+      return new Promise(function(resolve, reject) {
+        var callbackName = "cb_" + Math.round(Math.random() * 1000000);
+        window[callbackName] = function(data) {
+          resolve(data);
+          delete window[callbackName];
+          document.body.removeChild(script);
+        };
+        var script = document.createElement("script");
+        script.src = url + (url.indexOf("?") >= 0 ? "&" : "?") + "callback=" + callbackName;
+        script.onerror = function() {
+          reject(new Error("Request failed"));
+          delete window[callbackName];
+        };
+        document.body.appendChild(script);
+      });
+    }
+
+    function initials(name) {
+      if (!name) return "?";
+      var parts = name.split(",")[0].trim().split(" ");
+      return (parts[0][0] || "").toUpperCase();
+    }
+
+    if (!token) {
+      window.location.href = "index.html";
+    } else {
+      jsonp(EXEC_URL + "?action=whoami&token=" + encodeURIComponent(token))
+        .then(function(data) {
+          if (!data.valid) {
+            sessionStorage.clear();
+            window.location.href = "index.html";
+            return;
+          }
+          currentRole = data.role;
+          document.getElementById("avatarInitials").textContent = initials(data.name);
+          document.getElementById("greetingName").textContent = data.name;
+          document.getElementById("roleChip").textContent = data.role;
+
+          if (currentRole === "Admin") {
+            document.getElementById("usersLink").style.display = "flex";
+            document.getElementById("teamFieldWrap").style.display = "block";
+            wireAutocomplete("teamInput", "teamSuggestions", "searchTeam");
+          } else if (currentRole === "Team Leader" || currentRole === "SME") {
+            // team is forced server-side to their own name — no field needed
+          } else {
+            document.getElementById("lookupFields").innerHTML = "<div class='error'>Roster is only available to Admin, Team Leader, and SME roles.</div>";
+          }
+
+          wireAutocomplete("addCsrInput", "addCsrSuggestions", "searchCsr");
+        });
+    }
+
+    function wireAutocomplete(inputId, suggestionsId, action) {
+      var input = document.getElementById(inputId);
+      if (!input) return;
+      var box = document.getElementById(suggestionsId);
+      var debounceTimer = null;
+
+      input.addEventListener("input", function() {
+        clearTimeout(debounceTimer);
+        var query = input.value.trim();
+        if (!query) { box.style.display = "none"; return; }
+
+        debounceTimer = setTimeout(function() {
+          jsonp(EXEC_URL + "?action=" + action + "&token=" + encodeURIComponent(token) + "&q=" + encodeURIComponent(query))
+            .then(function(data) {
+              if (!data.matches || data.matches.length === 0) { box.style.display = "none"; return; }
+              box.innerHTML = data.matches.map(function(name) {
+                return "<div onmousedown=\"document.getElementById('" + inputId + "').value='" + name.replace(/'/g, "\\'") + "'; document.getElementById('" + suggestionsId + "').style.display='none';\">" + name + "</div>";
+              }).join("");
+              box.style.display = "block";
+            });
+        }, 400);
+      });
+
+      input.addEventListener("blur", function() {
+        setTimeout(function() { box.style.display = "none"; }, 150);
+      });
+    }
+
+    // "Q3 2026" -> "Quarter 3 - 2026". Falls back to the raw string if unparseable.
+    function formatQuarterLabel(q) {
+      var m = /^Q(\d)\s+(\d{4})$/.exec((q || "").trim());
+      if (!m) return q;
+      return "Quarter " + m[1] + " - " + m[2];
+    }
+
+    // "Morales, Mike Marvin" -> "Mike"
+    function firstNameOf(fullName) {
+      if (!fullName) return "";
+      var afterComma = fullName.indexOf(",") >= 0 ? fullName.split(",")[1] : fullName;
+      return afterComma.trim().split(" ")[0];
+    }
+
+    function scoreClass(score) {
+      var n = parseFloat(score);
+      if (isNaN(n)) return "";
+      if (n >= 85) return "good";
+      if (n >= 70) return "warn";
+      return "bad";
+    }
+
+    function loadRoster() {
+      var errorEl = document.getElementById("lookupError");
+      errorEl.textContent = "";
+
+      var quarter = document.getElementById("quarterInput").value.trim();
+      if (!quarter) { errorEl.textContent = "Quarter is required."; return; }
+
+      var url = EXEC_URL + "?action=listRoster&token=" + encodeURIComponent(token) + "&quarter=" + encodeURIComponent(quarter);
+      if (currentRole === "Admin") {
+        var team = document.getElementById("teamInput").value.trim();
+        if (!team) { errorEl.textContent = "Team leader is required for Admin."; return; }
+        url += "&team=" + encodeURIComponent(team);
+      }
+
+      document.getElementById("rosterView").innerHTML = "<div class='empty-state'>Loading&hellip;</div>";
+      document.getElementById("addMemberBox").style.display = "none";
+
+      jsonp(url).then(function(data) {
+        if (data.error) {
+          document.getElementById("rosterView").innerHTML = "";
+          errorEl.textContent = data.error;
+          return;
+        }
+        currentTeam = data.teamLeader;
+        currentQuarter = data.quarter;
+        renderRoster(data);
+        document.getElementById("addMemberBox").style.display = "block";
+      });
+    }
+
+    function renderRoster(data) {
+      var title = "Team " + firstNameOf(data.teamLeader) + " &mdash; " + formatQuarterLabel(data.quarter);
+      var avg = data.teamQuarterAverage != null ? data.teamQuarterAverage + "%" : "No audit data for this quarter";
+
+      var memberRows = data.members.length === 0
+        ? "<div class='empty-row'>No CSRs on this roster yet.</div>"
+        : data.members.map(function(m) {
+            return "<div class='member-row'>" +
+              "<span>" + m.csr + "</span>" +
+              "<span style='display:flex; align-items:center; gap:10px;'>" +
+              "<span class='member-score " + scoreClass(m.quarterAverage) + "'>" + (m.quarterAverage != null ? m.quarterAverage + "%" : "No data") + "</span>" +
+              "<button class='secondary' onclick=\"removeMember('" + m.csr.replace(/'/g, "\\'") + "')\">Remove</button>" +
+              "</span></div>";
+          }).join("");
+
+      document.getElementById("rosterView").innerHTML =
+        "<div class='panel'>" +
+        "<div class='roster-title'>" + title + "</div>" +
+        "<div class='roster-avg'>Team average this quarter: " + avg + "</div>" +
+        "<div style='margin-top:12px;'>" + memberRows + "</div>" +
+        "</div>";
+    }
+
+    function addMember() {
+      var csr = document.getElementById("addCsrInput").value.trim();
+      var msgEl = document.getElementById("addMemberMsg");
+      msgEl.textContent = "";
+      msgEl.className = "";
+
+      if (!csr) { msgEl.textContent = "Enter a CSR name."; msgEl.className = "error"; return; }
+
+      var url = EXEC_URL + "?action=addToRoster&token=" + encodeURIComponent(token) +
+                "&quarter=" + encodeURIComponent(currentQuarter) + "&csr=" + encodeURIComponent(csr);
+      if (currentRole === "Admin") url += "&team=" + encodeURIComponent(currentTeam);
+
+      jsonp(url).then(function(data) {
+        if (data.error) {
+          msgEl.textContent = data.error;
+          msgEl.className = "error";
+        } else {
+          msgEl.textContent = data.message;
+          msgEl.className = "msg";
+          document.getElementById("addCsrInput").value = "";
+          loadRoster();
+        }
+      });
+    }
+
+    function removeMember(csr) {
+      var url = EXEC_URL + "?action=removeFromRoster&token=" + encodeURIComponent(token) +
+                "&quarter=" + encodeURIComponent(currentQuarter) + "&csr=" + encodeURIComponent(csr);
+      if (currentRole === "Admin") url += "&team=" + encodeURIComponent(currentTeam);
+
+      jsonp(url).then(function(data) {
+        if (data.error) { alert(data.error); return; }
+        loadRoster();
+      });
+    }
+
+    function logout() {
+      sessionStorage.clear();
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>
