@@ -6,12 +6,21 @@
   <style>
     .roster-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
     .roster-avg { font-family: var(--font-mono); font-size: 13px; color: var(--text-muted); }
-    .member-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); }
-    .member-row:last-child { border-bottom: none; }
-    .member-score { font-family: var(--font-mono); font-weight: 700; font-size: 13px; }
-    .member-score.good { color: var(--good); }
-    .member-score.warn { color: var(--warn); }
-    .member-score.bad { color: var(--bad); }
+    .dnd-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+    .dnd-col { background: var(--bg); border: 1.5px dashed var(--border-strong); border-radius: var(--radius); padding: 12px; min-height: 160px; }
+    .dnd-col.dragover { border-color: var(--accent); background: var(--accent-quiet); }
+    .dnd-col-title { font-size: 11px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+    .dnd-chip {
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 11px; margin-bottom: 6px; cursor: grab; font-size: 12.5px;
+    }
+    .dnd-chip:active { cursor: grabbing; }
+    .dnd-chip .score { font-family: var(--font-mono); font-weight: 700; font-size: 12px; }
+    .dnd-chip .score.good { color: var(--good); }
+    .dnd-chip .score.warn { color: var(--warn); }
+    .dnd-chip .score.bad { color: var(--bad); }
+    .dnd-empty { color: var(--text-faint); font-size: 12px; text-align: center; padding: 20px 0; }
   </style>
 </head>
 <body>
@@ -59,22 +68,21 @@
       <div class="topbar">
         <div>
           <h1>Roster</h1>
-          <div class="subtitle">Team membership by quarter, with each member's quarter average</div>
+          <div class="subtitle">Drag CSRs between columns to assign them to a team's roster</div>
         </div>
       </div>
 
       <div class="page-body">
 
         <div class="form-box">
-          <div class="inline-fields autocomplete-wrap" style="align-items:flex-end;" id="lookupFields">
+          <div class="inline-fields" style="align-items:flex-end;">
             <div style="flex:1; display:none;" id="teamFieldWrap">
               <div class="field-label">Team leader</div>
-              <input type="text" id="teamInput" placeholder="start typing a team..." autocomplete="off">
-              <div id="teamSuggestions" class="suggestions"></div>
+              <select id="teamSelect"><option value="">Select a team&hellip;</option></select>
             </div>
             <div style="flex:1;">
               <div class="field-label">Quarter</div>
-              <input type="text" id="quarterInput" placeholder="e.g. Q3 2026">
+              <select id="quarterSelect"><option value="">Select a quarter&hellip;</option></select>
             </div>
             <button onclick="loadRoster()" style="white-space:nowrap;">Load roster</button>
           </div>
@@ -82,16 +90,6 @@
         </div>
 
         <div id="rosterView"></div>
-
-        <div class="form-box" id="addMemberBox" style="display:none; margin-top:16px;">
-          <div class="panel-head">Add CSR to this roster</div>
-          <div class="inline-fields autocomplete-wrap">
-            <input type="text" id="addCsrInput" placeholder="start typing a CSR name..." autocomplete="off">
-            <div id="addCsrSuggestions" class="suggestions"></div>
-            <button onclick="addMember()" style="white-space:nowrap;">Add</button>
-          </div>
-          <div id="addMemberMsg"></div>
-        </div>
 
       </div>
     </div>
@@ -103,6 +101,7 @@
     var currentRole = null;
     var currentTeam = null;
     var currentQuarter = null;
+    var draggedCsr = null;
 
     function jsonp(url) {
       return new Promise(function(resolve, reject) {
@@ -146,53 +145,36 @@
           if (currentRole === "Admin") {
             document.getElementById("usersLink").style.display = "flex";
             document.getElementById("teamFieldWrap").style.display = "block";
-            wireAutocomplete("teamInput", "teamSuggestions", "searchTeam");
-          } else if (currentRole === "Team Leader" || currentRole === "SME") {
-            // team is forced server-side to their own name — no field needed
-          } else {
-            document.getElementById("lookupFields").innerHTML = "<div class='error'>Roster is only available to Admin, Team Leader, and SME roles.</div>";
+            populateSelect("teamSelect", "listTeams", "teams");
+          } else if (currentRole !== "Team Leader" && currentRole !== "SME") {
+            document.getElementById("rosterView").innerHTML = "<div class='empty-state'>Roster is only available to Admin, Team Leader, and SME roles.</div>";
+            document.querySelector(".form-box").style.display = "none";
           }
 
-          wireAutocomplete("addCsrInput", "addCsrSuggestions", "searchCsr");
+          populateSelect("quarterSelect", "listQuarters", "quarters");
         });
     }
 
-    function wireAutocomplete(inputId, suggestionsId, action) {
-      var input = document.getElementById(inputId);
-      if (!input) return;
-      var box = document.getElementById(suggestionsId);
-      var debounceTimer = null;
-
-      input.addEventListener("input", function() {
-        clearTimeout(debounceTimer);
-        var query = input.value.trim();
-        if (!query) { box.style.display = "none"; return; }
-
-        debounceTimer = setTimeout(function() {
-          jsonp(EXEC_URL + "?action=" + action + "&token=" + encodeURIComponent(token) + "&q=" + encodeURIComponent(query))
-            .then(function(data) {
-              if (!data.matches || data.matches.length === 0) { box.style.display = "none"; return; }
-              box.innerHTML = data.matches.map(function(name) {
-                return "<div onmousedown=\"document.getElementById('" + inputId + "').value='" + name.replace(/'/g, "\\'") + "'; document.getElementById('" + suggestionsId + "').style.display='none';\">" + name + "</div>";
-              }).join("");
-              box.style.display = "block";
-            });
-        }, 400);
-      });
-
-      input.addEventListener("blur", function() {
-        setTimeout(function() { box.style.display = "none"; }, 150);
-      });
+    function populateSelect(selectId, action, key) {
+      jsonp(EXEC_URL + "?action=" + action + "&token=" + encodeURIComponent(token))
+        .then(function(data) {
+          if (data.error || !data[key]) return;
+          var sel = document.getElementById(selectId);
+          data[key].forEach(function(val) {
+            var opt = document.createElement("option");
+            opt.value = val;
+            opt.textContent = val;
+            sel.appendChild(opt);
+          });
+        });
     }
 
-    // "Q3 2026" -> "Quarter 3 - 2026". Falls back to the raw string if unparseable.
     function formatQuarterLabel(q) {
       var m = /^Q(\d)\s+(\d{4})$/.exec((q || "").trim());
       if (!m) return q;
       return "Quarter " + m[1] + " - " + m[2];
     }
 
-    // "Morales, Mike Marvin" -> "Mike"
     function firstNameOf(fullName) {
       if (!fullName) return "";
       var afterComma = fullName.indexOf(",") >= 0 ? fullName.split(",")[1] : fullName;
@@ -211,18 +193,17 @@
       var errorEl = document.getElementById("lookupError");
       errorEl.textContent = "";
 
-      var quarter = document.getElementById("quarterInput").value.trim();
-      if (!quarter) { errorEl.textContent = "Quarter is required."; return; }
+      var quarter = document.getElementById("quarterSelect").value;
+      if (!quarter) { errorEl.textContent = "Select a quarter."; return; }
 
       var url = EXEC_URL + "?action=listRoster&token=" + encodeURIComponent(token) + "&quarter=" + encodeURIComponent(quarter);
       if (currentRole === "Admin") {
-        var team = document.getElementById("teamInput").value.trim();
-        if (!team) { errorEl.textContent = "Team leader is required for Admin."; return; }
+        var team = document.getElementById("teamSelect").value;
+        if (!team) { errorEl.textContent = "Select a team."; return; }
         url += "&team=" + encodeURIComponent(team);
       }
 
       document.getElementById("rosterView").innerHTML = "<div class='empty-state'>Loading&hellip;</div>";
-      document.getElementById("addMemberBox").style.display = "none";
 
       jsonp(url).then(function(data) {
         if (data.error) {
@@ -233,55 +214,81 @@
         currentTeam = data.teamLeader;
         currentQuarter = data.quarter;
         renderRoster(data);
-        document.getElementById("addMemberBox").style.display = "block";
       });
+    }
+
+    function chipHtml(csr, score, inRoster) {
+      return "<div class='dnd-chip' draggable='true' data-csr='" + csr.replace(/'/g, "&#39;") + "' " +
+        "ondragstart=\"onDragStart(event, '" + csr.replace(/'/g, "\\'") + "')\">" +
+        "<span>" + csr + "</span>" +
+        (inRoster ? "<span class='score " + scoreClass(score) + "'>" + (score != null ? score + "%" : "no data") + "</span>" : "") +
+        "</div>";
     }
 
     function renderRoster(data) {
       var title = "Team " + firstNameOf(data.teamLeader) + " &mdash; " + formatQuarterLabel(data.quarter);
       var avg = data.teamQuarterAverage != null ? data.teamQuarterAverage + "%" : "No audit data for this quarter";
 
-      var memberRows = data.members.length === 0
-        ? "<div class='empty-row'>No CSRs on this roster yet.</div>"
-        : data.members.map(function(m) {
-            return "<div class='member-row'>" +
-              "<span>" + m.csr + "</span>" +
-              "<span style='display:flex; align-items:center; gap:10px;'>" +
-              "<span class='member-score " + scoreClass(m.quarterAverage) + "'>" + (m.quarterAverage != null ? m.quarterAverage + "%" : "No data") + "</span>" +
-              "<button class='secondary' onclick=\"removeMember('" + m.csr.replace(/'/g, "\\'") + "')\">Remove</button>" +
-              "</span></div>";
-          }).join("");
+      var memberChips = data.members.length === 0
+        ? "<div class='dnd-empty'>Drag CSRs here to add them to the roster.</div>"
+        : data.members.map(function(m) { return chipHtml(m.csr, m.quarterAverage, true); }).join("");
+
+      var availableChips = data.availableCsrs.length === 0
+        ? "<div class='dnd-empty'>No other CSRs found for this team.</div>"
+        : data.availableCsrs.map(function(csr) { return chipHtml(csr, null, false); }).join("");
 
       document.getElementById("rosterView").innerHTML =
         "<div class='panel'>" +
         "<div class='roster-title'>" + title + "</div>" +
         "<div class='roster-avg'>Team average this quarter: " + avg + "</div>" +
-        "<div style='margin-top:12px;'>" + memberRows + "</div>" +
+        "<div class='dnd-columns'>" +
+        "<div class='dnd-col' id='availableCol' ondragover='onDragOver(event)' ondragleave='onDragLeave(event)' ondrop=\"onDrop(event, 'available')\">" +
+        "<div class='dnd-col-title'>Available CSRs</div>" + availableChips +
+        "</div>" +
+        "<div class='dnd-col' id='rosterCol' ondragover='onDragOver(event)' ondragleave='onDragLeave(event)' ondrop=\"onDrop(event, 'roster')\">" +
+        "<div class='dnd-col-title'>On roster</div>" + memberChips +
+        "</div>" +
+        "</div>" +
         "</div>";
     }
 
-    function addMember() {
-      var csr = document.getElementById("addCsrInput").value.trim();
-      var msgEl = document.getElementById("addMemberMsg");
-      msgEl.textContent = "";
-      msgEl.className = "";
+    function onDragStart(ev, csr) {
+      draggedCsr = csr;
+      ev.dataTransfer.setData("text/plain", csr);
+    }
 
-      if (!csr) { msgEl.textContent = "Enter a CSR name."; msgEl.className = "error"; return; }
+    function onDragOver(ev) {
+      ev.preventDefault();
+      ev.currentTarget.classList.add("dragover");
+    }
 
+    function onDragLeave(ev) {
+      ev.currentTarget.classList.remove("dragover");
+    }
+
+    function onDrop(ev, targetColumn) {
+      ev.preventDefault();
+      ev.currentTarget.classList.remove("dragover");
+      if (!draggedCsr) return;
+
+      var csr = draggedCsr;
+      draggedCsr = null;
+
+      if (targetColumn === "roster") {
+        addMember(csr);
+      } else {
+        removeMember(csr);
+      }
+    }
+
+    function addMember(csr) {
       var url = EXEC_URL + "?action=addToRoster&token=" + encodeURIComponent(token) +
                 "&quarter=" + encodeURIComponent(currentQuarter) + "&csr=" + encodeURIComponent(csr);
       if (currentRole === "Admin") url += "&team=" + encodeURIComponent(currentTeam);
 
       jsonp(url).then(function(data) {
-        if (data.error) {
-          msgEl.textContent = data.error;
-          msgEl.className = "error";
-        } else {
-          msgEl.textContent = data.message;
-          msgEl.className = "msg";
-          document.getElementById("addCsrInput").value = "";
-          loadRoster();
-        }
+        if (data.error) { alert(data.error); return; }
+        loadRoster();
       });
     }
 
