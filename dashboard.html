@@ -20,6 +20,10 @@
           <span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16M4 19V9M10 19V5M16 19v-7"/></svg></span>
           KPI Report
         </a>
+        <a href="roster.html">
+          <span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6"/><path d="M15.5 3.5a3.2 3.2 0 0 1 0 6"/><path d="M16 14.2c2.6.4 4.5 2.4 4.5 5.3"/></svg></span>
+          Roster
+        </a>
         <a href="appointments.html">
           <span class="icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>
           Appointments
@@ -203,6 +207,13 @@
       return "bad";
     }
 
+    function fmtAht(seconds) {
+      if (seconds == null) return "-";
+      var m = Math.floor(seconds / 60);
+      var s = Math.round(seconds % 60);
+      return m + ":" + (s < 10 ? "0" : "") + s;
+    }
+
     function kpiCard(iconClass, iconSvg, label, value, sub) {
       return "<div class='kpi-card'>" +
         "<div class='kpi-icon " + iconClass + "'>" + iconSvg + "</div>" +
@@ -298,7 +309,8 @@
               kpiCard("green", ICONS.check, "Pass rate", (data.orgPassRate != null ? data.orgPassRate + "%" : "-"), "\u2265" + data.passRateThreshold + " = Pass") +
               kpiCard("orange", ICONS.x, "Fail rate", (data.orgFailRate != null ? data.orgFailRate + "%" : "-")) +
               kpiCard("purple", ICONS.doc, "Total audits", data.totalAudits != null ? data.totalAudits : "-") +
-              kpiCard("blue", ICONS.team, "Teams tracked", teamCount);
+              kpiCard("blue", ICONS.team, "Teams tracked", teamCount) +
+              kpiCard("orange", ICONS.check, "Avg chat duration", fmtAht(data.avgChatDurationSeconds), data.avgChatDurationMonth || "");
 
             document.getElementById("auditsTileValue").textContent = data.totalAudits + " chats audited";
 
