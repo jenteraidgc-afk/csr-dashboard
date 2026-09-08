@@ -78,7 +78,7 @@
           <div class="inline-fields autocomplete-wrap" style="align-items:flex-end;">
             <div style="flex:1;">
               <div class="field-label">Month</div>
-              <input type="text" id="monthInput" placeholder="e.g. Sep 2026">
+              <select id="monthInput" onchange="loadKpi()"><option value="">Select a month&hellip;</option></select>
             </div>
             <div style="flex:1; display:none;" id="csrFilterWrap">
               <div class="field-label">CSR (optional, Admin only)</div>
