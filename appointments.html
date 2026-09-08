@@ -202,9 +202,9 @@
                 "<div class='title'>" + a["Title"] + "</div>" +
                 "<span class='status-tag " + a["Status"] + "'>" + a["Status"] + "</span>" +
                 "</div>" +
-                "<div class='meta'>" + a["Date"] + " " + a["Time"] + " &middot; Assigned to: " + (a["Assigned To"] || "-") + " &middot; Team: " + (a["Team"] || "-") + "</div>" +
+                "<div class='meta'>" + formatDate(a["Date"]) + " " + a["Time"] + " &middot; Assigned to: " + (a["Assigned To"] || "-") + " &middot; Team: " + (a["Team"] || "-") + "</div>" +
                 (a["Description"] ? "<div style='margin-top:4px;'>" + a["Description"] + "</div>" : "") +
-                "<div class='meta' style='margin-top:4px;'>Created by " + a["Created By"] + "</div>" +
+                "<div  style='margin-top:4px;'>Created by " + a["Created By"] + "</div>" +
                 "<div class='btn-row'>" +
                 "<button class='secondary' onclick=\"changeStatus('" + a["Appointment ID"] + "','Completed')\">Complete</button>" +
                 "<button class='secondary' onclick=\"changeStatus('" + a["Appointment ID"] + "','Cancelled')\">Cancel</button>" +
