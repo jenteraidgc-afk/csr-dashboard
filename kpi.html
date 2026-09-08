@@ -219,8 +219,19 @@
       });
     }
 
-    function renderResults() {
-      var el = document.getElementById("kpiResults");
+    function renderOverview() {
+  var complete = currentRecords.filter(function(r) { return r.finalKpi != null; });
+  var avg = complete.length ? (complete.reduce(function(s, r) { return s + r.finalKpi; }, 0) / complete.length).toFixed(2) : null;
+  document.getElementById("kpiOverview").innerHTML =
+    "<div class='kpi-card'><div class='kpi-label'>Org Avg Final KPI</div><div class='kpi-value " + finalKpiClass(avg) + "'>" + (avg != null ? avg : "-") + "</div></div>" +
+    "<div class='kpi-card'><div class='kpi-label'>Complete Records</div><div class='kpi-value accent'>" + complete.length + "</div></div>" +
+    "<div class='kpi-card'><div class='kpi-label'>Incomplete Records</div><div class='kpi-value bad'>" + (currentRecords.length - complete.length) + "</div></div>" +
+    "<div class='kpi-card'><div class='kpi-label'>Total CSRs</div><div class='kpi-value'>" + currentRecords.length + "</div></div>";
+}
+
+function renderResults() {
+  renderOverview();
+  var el = document.getElementById("kpiResults");
       if (currentRecords.length === 0) {
         el.innerHTML = "<div class='empty-state'>No records for this month.</div>";
         return;
