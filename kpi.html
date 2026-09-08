@@ -147,10 +147,7 @@
             wireAutocomplete("csrFilterInput", "csrSuggestions", "searchCsr");
           }
 
-          // default to current month, e.g. "Sep 2026"
-          var monthAbbr = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-          var now = new Date();
-          document.getElementById("monthInput").value = monthAbbr[now.getMonth()] + " " + now.getFullYear();
+                    populateSelect("monthInput", "listMonths", "months");
         });
     }
 
@@ -283,6 +280,19 @@
       sessionStorage.clear();
       window.location.href = "index.html";
     }
+    function populateSelect(selectId, action, key) {
+  jsonp(EXEC_URL + "?action=" + action + "&token=" + encodeURIComponent(token))
+    .then(function(data) {
+      if (data.error || !data[key]) return;
+      var sel = document.getElementById(selectId);
+      data[key].forEach(function(val) {
+        var opt = document.createElement("option");
+        opt.value = val;
+        opt.textContent = val;
+        sel.appendChild(opt);
+      });
+    });
+}
   </script>
 </body>
 </html>
