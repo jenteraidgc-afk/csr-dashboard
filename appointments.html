@@ -285,6 +285,15 @@
       sessionStorage.clear();
       window.location.href = "index.html";
     }
+    function formatDate(v) {
+  if (!v) return v;
+  var s = String(v);
+  if (s.indexOf("T") > -1 && s.slice(-1) === "Z") {
+    var d = new Date(s);
+    return (d.getMonth()+1) + "/" + d.getDate() + "/" + d.getFullYear();
+  }
+  return s;
+}
   </script>
 </body>
 </html>
