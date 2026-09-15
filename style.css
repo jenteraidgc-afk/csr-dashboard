@@ -1,10 +1,15 @@
 /* ============================================================
-   CSR Dashboard — CRM shell design system, v5
+   Workforce Dashboard — CRM shell design system, v6
    Dark sidebar + light content area, icon-chip KPI cards,
-   leaderboard rows, quick-action tiles.
+   leaderboard rows, quick-action tiles, smooth transitions.
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap');
+
+* { transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease, opacity 0.15s ease; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.content { animation: fadeIn 0.25s ease; }
 
 :root {
   --bg: #F3F4F8;
@@ -179,6 +184,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.01em; margin: 0; color: var(--
   align-items: flex-start;
   gap: 12px;
 }
+.kpi-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
 .kpi-card.highlight {
   background: linear-gradient(135deg, var(--accent), var(--accent-dark));
   border-color: transparent;
@@ -325,6 +331,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.01em; margin: 0; color: var(--
   margin-bottom: 8px;
   box-shadow: var(--shadow-sm);
 }
+.card:hover { box-shadow: var(--shadow-md); }
 
 .card-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
 .card .title { font-weight: 700; font-size: 13.5px; }
@@ -385,10 +392,11 @@ button {
   color: #fff;
   cursor: pointer;
 }
-button:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+button:hover { background: var(--accent-dark); border-color: var(--accent-dark); transform: translateY(-1px); }
+button:active { transform: translateY(0); }
 
 button.secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border-strong); }
-button.secondary:hover { background: var(--bg); }
+button.secondary:hover { background: var(--bg); transform: translateY(-1px); }
 
 button.danger { background: var(--bad); border-color: var(--bad); }
 button.danger:hover { background: #b91c1c; }
