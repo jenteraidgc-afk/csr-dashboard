@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>CSR Dashboard</title>
+  <title>Workforce Dashboard</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="app-shell">
     <div class="sidebar">
       <div class="sidebar-brand">
-        <div class="mark">CS</div>
-        <div class="label"><div class="t">Audit CRM</div><div class="s">Quality Assurance</div></div>
+        <div class="mark">WD</div>
+        <div class="label"><div class="t">Workforce Dashboard</div><div class="s">Quality Assurance</div></div>
       </div>
       <div class="sidebar-nav">
         <a href="dashboard.html" class="active">
@@ -55,6 +55,11 @@
           <h1>Dashboard Overview</h1>
           <div class="subtitle" id="syncNote">Loading&hellip;</div>
         </div>
+        <div id="monthFilterWrap" style="display:none; min-width:180px;">
+          <select id="monthFilter" onchange="onMonthFilterChange()" style="margin-bottom:0;">
+            <option value="">All time</option>
+          </select>
+        </div>
       </div>
 
       <div class="page-body">
@@ -95,6 +100,27 @@
           </div>
           <div style="position:relative; height:220px;">
             <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+
+        <div class="panel-grid" id="analyticsChartsRow" style="display:none;">
+          <div class="chart-panel" style="margin-bottom:0;">
+            <div class="panel-head">
+              <span><span class="dot accent"></span> Most chat tagged</span>
+              <span class="right" id="categoryChartMonth"></span>
+            </div>
+            <div style="position:relative; height:220px;">
+              <canvas id="categoryChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-panel" style="margin-bottom:0;">
+            <div class="panel-head">
+              <span><span class="dot bad"></span> Most errors / fail</span>
+              <span class="right" id="criteriaChartMonth"></span>
+            </div>
+            <div style="position:relative; height:220px;">
+              <canvas id="criteriaChart"></canvas>
+            </div>
           </div>
         </div>
 
@@ -331,6 +357,123 @@
       });
     }
 
+    var lastAggregates = null; // Admin's full aggregates, cached client-side for month-filter re-renders
+
+    function renderLeaderboards(csrEntries, teamEntries) {
+      var topSorted = csrEntries.slice().sort(function(a,b){ return b.score - a.score; }).slice(0, 5);
+      var bottomSorted = csrEntries.slice().sort(function(a,b){ return a.score - b.score; }).slice(0, 5);
+
+      document.getElementById("topPerformers").innerHTML = topSorted.length
+        ? topSorted.map(function(e, i) { return leaderRow(i+1, e.name, "", e.score + "%", "good"); }).join("")
+        : "<div class='empty-row'>No data yet</div>";
+
+      document.getElementById("needsCoaching").innerHTML = bottomSorted.length
+        ? bottomSorted.map(function(e, i) { return leaderRow(i+1, e.name, "", e.score + "%", "bad"); }).join("")
+        : "<div class='empty-row'>No data yet</div>";
+
+      var teamSorted = teamEntries.slice().sort(function(a,b){ return b.score - a.score; }).slice(0, 5);
+      document.getElementById("teamSnapshot").innerHTML = teamSorted.length
+        ? teamSorted.map(function(e, i) { return leaderRow(i+1, e.name, "Team leader", e.score + "%", scoreClass(e.score) === "bad" ? "bad" : "good"); }).join("")
+        : "<div class='empty-row'>No data yet</div>";
+    }
+
+    // Sums a { "Label|Mon YYYY": count } map into { Label: count }, either for
+    // one specific month, or across all months when monthFilter is "".
+    function sumByLabel(map, monthFilter) {
+      var totals = {};
+      Object.keys(map || {}).forEach(function(key) {
+        var parts = key.split("|");
+        var label = parts[0], month = parts[1];
+        if (monthFilter && month !== monthFilter) return;
+        totals[label] = (totals[label] || 0) + map[key];
+      });
+      return totals;
+    }
+
+    var categoryChartInstance = null, criteriaChartInstance = null;
+    var CHART_COLORS = ["#3B5BDB","#7C4DFF","#16A34A","#D97706","#DC2626","#0EA5E9","#DB2777","#65A30D"];
+
+    function renderAnalyticsCharts(monthFilter) {
+      if (!lastAggregates) return;
+      document.getElementById("analyticsChartsRow").style.display = "grid";
+      var monthLabel = monthFilter || "All time";
+      document.getElementById("categoryChartMonth").textContent = monthLabel;
+      document.getElementById("criteriaChartMonth").textContent = monthLabel;
+
+      var catTotals = sumByLabel(lastAggregates.categoryByMonth, monthFilter);
+      var catLabels = Object.keys(catTotals).sort(function(a,b){ return catTotals[b]-catTotals[a]; });
+      if (categoryChartInstance) categoryChartInstance.destroy();
+      categoryChartInstance = new Chart(document.getElementById("categoryChart"), {
+        type: "pie",
+        data: {
+          labels: catLabels,
+          datasets: [{ data: catLabels.map(function(l){ return catTotals[l]; }), backgroundColor: CHART_COLORS }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: "right", labels: { font: { family: "Inter", size: 11 } } } }
+        }
+      });
+
+      var critTotals = sumByLabel(lastAggregates.criteriaFailByMonth, monthFilter);
+      var critLabels = Object.keys(critTotals).sort(function(a,b){ return critTotals[b]-critTotals[a]; }).slice(0, 8);
+      if (criteriaChartInstance) criteriaChartInstance.destroy();
+      criteriaChartInstance = new Chart(document.getElementById("criteriaChart"), {
+        type: "bar",
+        data: {
+          labels: critLabels,
+          datasets: [{ data: critLabels.map(function(l){ return critTotals[l]; }), backgroundColor: "#DC2626", borderRadius: 4 }]
+        },
+        options: {
+          indexAxis: "y", responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: "#EBECF1" }, ticks: { font: { family: "Inter", size: 10 }, precision: 0 } },
+            y: { grid: { display: false }, ticks: { font: { family: "Inter", size: 10 } } }
+          }
+        }
+      });
+    }
+
+    function onMonthFilterChange() {
+      var month = document.getElementById("monthFilter").value;
+      renderAnalyticsCharts(month);
+
+      if (!month) {
+        // "All time" — back to the org-wide perCsrAverage / perTeamAverage leaderboards
+        var csrEntries = Object.keys(lastAggregates.perCsrAverage || {})
+          .map(function(name) { return { name: name, score: lastAggregates.perCsrAverage[name] }; })
+          .filter(function(e) { return e.score != null; });
+        var teamEntries = Object.keys(lastAggregates.perTeamAverage || {})
+          .map(function(name) { return { name: name, score: lastAggregates.perTeamAverage[name] }; })
+          .filter(function(e) { return e.score != null; });
+        renderLeaderboards(csrEntries, teamEntries);
+        return;
+      }
+
+      // A specific month — rebuild leaderboards from that month's actual QA Audit Score (KPI endpoint)
+      jsonp(EXEC_URL + "?action=kpi&token=" + encodeURIComponent(token) + "&month=" + encodeURIComponent(month))
+        .then(function(data) {
+          if (data.error || !data.records) return;
+          var csrEntries = data.records
+            .filter(function(r) { return r.qaAuditScore != null; })
+            .map(function(r) { return { name: r.csr, score: r.qaAuditScore }; });
+
+          var teamTotals = {};
+          data.records.forEach(function(r) {
+            if (r.qaAuditScore == null || !r.teamLeader) return;
+            if (!teamTotals[r.teamLeader]) teamTotals[r.teamLeader] = [];
+            teamTotals[r.teamLeader].push(r.qaAuditScore);
+          });
+          var teamEntries = Object.keys(teamTotals).map(function(t) {
+            var vals = teamTotals[t];
+            return { name: t, score: Math.round((vals.reduce(function(a,b){return a+b;},0)/vals.length) * 100) / 100 };
+          });
+
+          renderLeaderboards(csrEntries, teamEntries);
+        });
+    }
+
     function loadSummary() {
       jsonp(EXEC_URL + "?action=summary&token=" + encodeURIComponent(token))
         .then(function(data) {
@@ -342,6 +485,7 @@
           document.getElementById("syncNote").textContent = "Last synced " + new Date(data.lastSynced).toLocaleString();
 
           if (currentRole === "Admin") {
+            lastAggregates = data;
             var teamCount = Object.keys(data.perTeamAverage || {}).length;
             document.getElementById("kpiGrid").innerHTML =
               highlightCard("Org average", data.orgAverage != null ? data.orgAverage : "-", "Overall QA score") +
@@ -357,31 +501,19 @@
               .map(function(name) { return { name: name, score: data.perCsrAverage[name] }; })
               .filter(function(e) { return e.score != null; });
 
-            var topSorted = csrEntries.slice().sort(function(a,b){ return b.score - a.score; }).slice(0, 5);
-            var bottomSorted = csrEntries.slice().sort(function(a,b){ return a.score - b.score; }).slice(0, 5);
-
-            document.getElementById("topPerformers").innerHTML = topSorted.length
-              ? topSorted.map(function(e, i) { return leaderRow(i+1, e.name, "", e.score + "%", "good"); }).join("")
-              : "<div class='empty-row'>No data yet</div>";
-
-            document.getElementById("needsCoaching").innerHTML = bottomSorted.length
-              ? bottomSorted.map(function(e, i) { return leaderRow(i+1, e.name, "", e.score + "%", "bad"); }).join("")
-              : "<div class='empty-row'>No data yet</div>";
-
             var teamEntries = Object.keys(data.perTeamAverage || {})
               .map(function(name) { return { name: name, score: data.perTeamAverage[name] }; })
-              .filter(function(e) { return e.score != null; })
-              .sort(function(a,b){ return b.score - a.score; })
-              .slice(0, 5);
+              .filter(function(e) { return e.score != null; });
 
-            document.getElementById("teamSnapshot").innerHTML = teamEntries.length
-              ? teamEntries.map(function(e, i) { return leaderRow(i+1, e.name, "Team leader", e.score + "%", scoreClass(e.score) === "bad" ? "bad" : "good"); }).join("")
-              : "<div class='empty-row'>No data yet</div>";
-
+            renderLeaderboards(csrEntries, teamEntries);
             document.getElementById("leaderboardGrid").style.display = "grid";
             renderTrendChart(data.monthlyAverage);
 
-          } else if (currentRole === "Team Leader" || currentRole === "SME") {
+            document.getElementById("monthFilterWrap").style.display = "block";
+            populateSelect("monthFilter", "listMonths", "months");
+            renderAnalyticsCharts(""); // "" = all-time
+
+          } else if (currentRole === "Team Leader" || currentRole === "SME" || currentRole === "QA") {
             var quarters = data.quarterlyAverages || {};
             var quarterKeys = Object.keys(quarters);
             var latestQ = quarterKeys[quarterKeys.length - 1];
@@ -400,14 +532,6 @@
               "<div class='panel'><div class='panel-head'><span class='dot accent'></span> Quarterly performance</div>" +
               (qRows || "<div class='empty-row'>No data yet</div>") + "</div>";
             document.getElementById("leaderboardGrid").style.display = "grid";
-
-          } else if (currentRole === "CSR") {
-            document.getElementById("kpiGrid").innerHTML =
-              highlightCard("My average score", data.myAverage != null ? data.myAverage : "No data yet", "") +
-              kpiCard("green", ICONS.check, "My pass rate", (data.myPassRate != null ? data.myPassRate + "%" : "-"), data.myPassRate != null ? "\u2265" + data.passRateThreshold + " = Pass" : "") +
-              kpiCard("orange", ICONS.x, "My fail rate", (data.myFailRate != null ? data.myFailRate + "%" : "-"));
-
-            document.getElementById("auditsTileValue").textContent = "View my history";
           }
         })
         .catch(function(err) {
@@ -434,7 +558,7 @@
     function renderControls() {
       var el = document.getElementById("controls");
 
-      if (currentRole === "Team Leader" || currentRole === "SME") {
+      if (currentRole === "Team Leader" || currentRole === "SME" || currentRole === "QA") {
         el.style.display = "block";
         el.innerHTML =
           "<div class='field-label'>Quarter</div>" +
@@ -478,7 +602,7 @@
       var url = EXEC_URL + "?action=details&token=" + encodeURIComponent(token) +
                  "&page=" + currentPage + "&pageSize=" + currentPageSize;
 
-      if (currentRole === "Team Leader" || currentRole === "SME") {
+      if (currentRole === "Team Leader" || currentRole === "SME" || currentRole === "QA") {
         var q = document.getElementById("quarterInput").value.trim();
         if (!q) return null;
         url += "&quarter=" + encodeURIComponent(q);
