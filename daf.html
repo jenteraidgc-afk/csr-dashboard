@@ -22,8 +22,8 @@
   <div class="app-shell">
     <div class="sidebar">
       <div class="sidebar-brand">
-        <div class="mark">CS</div>
-        <div class="label"><div class="t">Audit CRM</div><div class="s">Quality Assurance</div></div>
+        <div class="mark">WD</div>
+        <div class="label"><div class="t">Workforce Dashboard</div><div class="s">Quality Assurance</div></div>
       </div>
       <div class="sidebar-nav">
         <a href="dashboard.html">
@@ -140,17 +140,12 @@
             document.getElementById("usersLink").style.display = "flex";
           }
 
-          if (currentRole === "CSR") {
-            document.getElementById("csrLookupBox").style.display = "none";
-            loadCsrDetail(currentName);
+          if (currentRole === "Admin") {
+            wireAutocomplete("csrLookupInput", "csrSuggestions", "searchCsr");
           } else {
-            if (currentRole === "Admin") {
-              wireAutocomplete("csrLookupInput", "csrSuggestions", "searchCsr");
-            } else {
-              document.getElementById("csrLookupInput").placeholder = "start typing a name from your team...";
-            }
-            loadList();
+            document.getElementById("csrLookupInput").placeholder = "start typing a name from your team...";
           }
+          loadList();
         });
     }
 
@@ -229,7 +224,7 @@
             return;
           }
           var infractions = data.infractions || [];
-          var backLink = currentRole !== "CSR" ? "<div style='margin-bottom:10px;'><a href='#' onclick='loadList(); return false;'>&larr; Back to leaderboard</a></div>" : "";
+          var backLink = "<div style='margin-bottom:10px;'><a href='#' onclick='loadList(); return false;'>&larr; Back to leaderboard</a></div>";
 
           viewEl.innerHTML = backLink +
             "<div class='kpi-grid' style='margin-bottom:14px;'>" +
