@@ -10,13 +10,26 @@
       <div style="text-align:center; margin-bottom:20px;">
         <div style="width:40px; height:40px; border-radius:11px; background:linear-gradient(135deg,var(--accent),var(--purple)); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:15px; margin:0 auto 12px;">WD</div>
         <h1>Workforce Dashboard</h1>
-        <p class="muted" style="margin-top:6px; font-size:12.5px;">Sign in with your email and password</p>
+        <p class="muted" style="margin-top:6px; font-size:12.5px;" id="pageSubtitle">Sign in with your email</p>
       </div>
 
       <div class="login-panel">
-        <input type="email" id="email" placeholder="Email">
-        <input type="password" id="password" placeholder="Password">
-        <button onclick="login()" style="width:100%;">Sign in</button>
+        <div id="emailStep">
+          <input type="email" id="email" placeholder="Email">
+          <button onclick="login()" style="width:100%;">Sign in</button>
+        </div>
+
+        <div id="profileStep" style="display:none;">
+          <p class="muted" style="font-size:12px; margin-top:0; margin-bottom:12px;">
+            First time signing in — enter your details below.
+            <strong>Name must exactly match how you appear as Team Leader / Immediate Head elsewhere in the sheet</strong>
+            (e.g. "Diche, Rafael Kyle") — this is what the dashboard uses to show you your team's data.
+          </p>
+          <input type="text" id="profileName" placeholder="Full name (e.g. Lastname, Firstname)">
+          <input type="text" id="profilePosition" placeholder="Position / job title">
+          <button onclick="submitProfile()" style="width:100%;">Save and continue</button>
+        </div>
+
         <div id="error" class="error"></div>
       </div>
     </div>
@@ -24,6 +37,7 @@
 
   <script>
     var EXEC_URL = "https://script.google.com/macros/s/AKfycbyD9esDoJQrcSprufwsEQugkdbUZwSsQ-6eYih1M9b7uVe859yprQD4U6p9g9bj1Kw-/exec";
+    var pendingToken = null;
 
     function jsonp(url) {
       return new Promise(function(resolve, reject) {
@@ -45,21 +59,31 @@
 
     function login() {
       var email = document.getElementById("email").value.trim();
-      var password = document.getElementById("password").value.trim();
       var errorEl = document.getElementById("error");
       errorEl.textContent = "";
 
-      var url = EXEC_URL + "?action=login&email=" + encodeURIComponent(email) + "&password=" + encodeURIComponent(password);
+      if (!email) { errorEl.textContent = "Enter your email."; return; }
+
+      var url = EXEC_URL + "?action=login&email=" + encodeURIComponent(email);
 
       jsonp(url)
         .then(function(data) {
-          if (data.success) {
-            sessionStorage.setItem("token", data.token);
-            sessionStorage.setItem("name", data.name);
-            sessionStorage.setItem("role", data.role);
+          if (!data.success) {
+            errorEl.textContent = data.error || "Login failed";
+            return;
+          }
+
+          sessionStorage.setItem("token", data.token);
+          sessionStorage.setItem("name", data.name || "");
+          sessionStorage.setItem("role", data.role);
+          pendingToken = data.token;
+
+          if (data.profileComplete) {
             window.location.href = "dashboard.html";
           } else {
-            errorEl.textContent = data.error || "Login failed";
+            document.getElementById("pageSubtitle").textContent = "Welcome! One more step.";
+            document.getElementById("emailStep").style.display = "none";
+            document.getElementById("profileStep").style.display = "block";
           }
         })
         .catch(function(err) {
@@ -68,7 +92,28 @@
         });
     }
 
-    document.getElementById("password").addEventListener("keydown", function(e) {
+    function submitProfile() {
+      var name = document.getElementById("profileName").value.trim();
+      var position = document.getElementById("profilePosition").value.trim();
+      var errorEl = document.getElementById("error");
+      errorEl.textContent = "";
+
+      if (!name) { errorEl.textContent = "Name is required."; return; }
+
+      var url = EXEC_URL + "?action=completeProfile&token=" + encodeURIComponent(pendingToken) +
+                "&name=" + encodeURIComponent(name) + "&position=" + encodeURIComponent(position);
+
+      jsonp(url).then(function(data) {
+        if (!data.success) {
+          errorEl.textContent = data.error || "Something went wrong.";
+          return;
+        }
+        sessionStorage.setItem("name", data.name);
+        window.location.href = "dashboard.html";
+      });
+    }
+
+    document.getElementById("email").addEventListener("keydown", function(e) {
       if (e.key === "Enter") login();
     });
   </script>
